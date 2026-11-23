@@ -76,6 +76,7 @@
       <div><span>깨운 이웃</span><b id="rWoke"></b></div>
       <div><span>최대 콤보</span><b id="rCombo"></b></div>
       <div><span>점수</span><b id="rScore"></b></div>
+      <div id="rTimeRow" class="hidden"><span>기록</span><b id="rTime"></b></div>
     </div>
     <div class="title-badge">당신의 칭호</div>
     <div class="title-name" id="rTitle"></div>
@@ -159,7 +160,9 @@ const MODES = {
   endless: { name: '무한', desc: '지하로, 더 지하로. 끝없이 내려가기', noiseMul: 1, endless: true },
   night:   { name: '심야', desc: '새벽 3시. 모든 소음이 2배!', noiseMul: 2 },
   chaos:   { name: '대환장', desc: '규칙 반대! 최대한 많이 깨우고 탈출 (소음 제한 없음)', noiseMul: 1, chaos: true },
-  daily:   { name: '일일 도전', desc: '오늘은 모두가 같은 아파트를 내려가요', noiseMul: 1, seeded: true }
+  daily:   { name: '일일 도전', desc: '오늘은 모두가 같은 아파트를 내려가요', noiseMul: 1, seeded: true },
+  chase:   { name: '경비원 추격', desc: '천장 대신 경비원이 위층부터 쫓아와요! 시끄러울수록 빨라짐', noiseMul: 1, chase: true },
+  time:    { name: '타임어택', desc: '최대한 빨리 1층 도착! (클리어해야 기록 인정)', noiseMul: 1, timed: true }
 };
 const BALLS = [
   { id: 'basic',   emoji: '🏐', name: '기본 공',   desc: '균형형', grav: 1, noise: 1, move: 1, accel: 14, scoreMul: 1 },
@@ -421,6 +424,7 @@ const unitName = f => `${floorName(f.n - 1)} ${String(f.neighbor.unit).padStart(
 let state = 'title';
 let ball, cam, ceilY, ceilDelay, noiseLv, score, woke, lowestRoom, elapsed, combo, maxCombo, complaints, wokenList;
 let popups = [], parts = [], rings = [], chats = [], shake = 0, endReason = '', overT = 0, hitFlash = 0;
+let playTime = 0;
 let fx, guard, banner, slowT, heartT, comboTier, officeStage, bombing, quiet20;
 const input = { keys: { l: false, r: false }, ptr: new Map() };
 const COMBO_TIERS = [
@@ -442,7 +446,7 @@ function reset() {
   noiseLv = 0; score = 0; woke = 0; lowestRoom = TOP; elapsed = 0; combo = 0; maxCombo = 0; complaints = 0; wokenList = [];
   popups = []; parts = []; rings = []; chats = []; shake = 0; overT = 0; hitFlash = 0;
   fx = { mat: 0, feather: 0, ice: 0 }; guard = null; banner = null; slowT = 0; heartT = 0; comboTier = 0; officeStage = 0;
-  bombing = false; quiet20 = false;
+  bombing = false; quiet20 = false; playTime = 0;
 }
 
 function popup(x, y, text, color = '#fff', size = 22) {
@@ -473,6 +477,11 @@ function spawnGuard(msg) {
   const room = roomOf(ball.y);
   guard = { room, x: ball.x < W / 2 ? W - 22 : 22, followT: 0, step: 0, appear: 0 };
   chat('경비실', msg, 'guard');
+  SFX.whistle();
+}
+function startChase() {
+  guard = { room: TOP, x: ball.x < W / 2 ? W - 22 : 22, followT: 0, step: 0, appear: 0 };
+  chat('경비실', '100층에서 쿵 소리 신고 접수! 지금 올라갑니다 🚨', 'guard');
   SFX.whistle();
 }
 function breakCombo() {
@@ -780,6 +789,7 @@ function update(dt, realDt) {
   if (state !== 'play') return;
 
   for (const k in fx) fx[k] = Math.max(0, fx[k] - dt);
+  playTime += realDt;
   noiseLv = Math.max(0, noiseLv - dt * .8);
   // 심장 박동 (소음 90% 이상)
   if (!mode.chaos && noiseLv >= 90) { heartT -= dt; if (heartT <= 0) { heartT = .75; SFX.heart(); } } else heartT = 0;
@@ -858,12 +868,16 @@ function update(dt, realDt) {
   if (state !== 'play') return;
 
   // 경비원
-  if (guard) {
+  const guardFrozen = mode.chase && fx.ice > 0;     // 추격 모드에선 얼음 시계가 경비원을 멈춤
+  if (guard && !guardFrozen) {
     guard.appear = Math.min(1, guard.appear + dt * 2);
+    const depthG = TOP - lowestRoom;
+    const followDelay = mode.chase ? Math.max(.4, .85 - depthG * .004) * (1 - noiseLv / 250) : 1.5;
     const gr = roomOf(ball.y);
     if (guard.room > gr) {
       guard.followT += dt;
-      if (guard.followT > 1.5) {
+      // 너무 멀어지면 계단을 뛰어 내려와 따라잡음
+      if (guard.followT > followDelay * (mode.chase && guard.room - gr > 4 ? .45 : 1)) {
         guard.followT = 0; guard.room--;
         const above = getF(guard.room + 1);
         guard.x = above && above.hole ? above.hole.x + above.hole.w / 2 : guard.x;
@@ -871,7 +885,7 @@ function update(dt, realDt) {
       }
     } else if (guard.room === gr) {
       guard.followT = 0;
-      const sp = Math.min(120, 62 + (TOP - lowestRoom) * .5);
+      const sp = mode.chase ? Math.min(140, 78 + depthG * .6) : Math.min(120, 62 + depthG * .5);
       const d = ball.x - guard.x;
       guard.x += Math.sign(d) * Math.min(Math.abs(d), sp * dt);
       guard.step += dt;
@@ -879,8 +893,10 @@ function update(dt, realDt) {
     }
   }
 
-  // 천장
-  if (ceilDelay > 0) ceilDelay -= dt;
+  // 천장 (추격 모드에선 천장 대신 경비원)
+  if (mode.chase) {
+    if (ceilDelay > 0) { ceilDelay -= dt; if (ceilDelay <= 0) startChase(); }
+  } else if (ceilDelay > 0) ceilDelay -= dt;
   else if (fx.ice <= 0) {
     const depth = TOP - lowestRoom;
     let sp = 30 + Math.min(depth, 140) * .62;
@@ -888,7 +904,7 @@ function update(dt, realDt) {
     if (gap > 430) sp += (gap - 430) * .7;
     ceilY += sp * dt;
   }
-  if (ceilY >= ball.y - R) { ceilY = ball.y - R; endGame('ceiling'); return; }
+  if (!mode.chase && ceilY >= ball.y - R) { ceilY = ball.y - R; endGame('ceiling'); return; }
 
   if (!mode.chaos && noiseLv >= 100) { endGame('noise'); return; }
 
@@ -929,8 +945,9 @@ function endGame(reason) {
   if (reason === 'guard') { guard.caught = true; SFX.whistle(); }
   const floorsDown = TOP - lowestRoom;
   const best = store.get(bestKey(), 0);
-  const isBest = score > best;
-  if (isBest) store.set(bestKey(), score);
+  let isBest;
+  if (mode.timed) { isBest = reason === 'clear' && (!best || playTime < best); if (isBest) store.set(bestKey(), playTime); }
+  else { isBest = score > best; if (isBest) store.set(bestKey(), score); }
   // 누적 기록 & 캐릭터 해금
   const before = BALLS.filter(isUnlocked).map(b => b.id);
   stats.total += score;
@@ -940,7 +957,7 @@ function endGame(reason) {
   if (quiet20) stats.quiet20 = true;
   store.set('tiptoe.stats', stats);
   const unlocked = BALLS.filter(b => isUnlocked(b) && !before.includes(b.id));
-  lastResult = { reason, floorsDown, woke, score, maxCombo, title: titleFor(woke, floorsDown), isBest, unlocked, mode: mode.name,
+  lastResult = { reason, floorsDown, woke, score, maxCombo, time: playTime, timed: !!mode.timed, title: titleFor(woke, floorsDown), isBest, unlocked, mode: mode.name,
     lit: collectLit() };
   setTimeout(showResult, reason === 'clear' ? 3000 : 1000);
 }
@@ -961,6 +978,9 @@ function showResult() {
   $('rWoke').textContent = r.woke + '명';
   $('rCombo').textContent = mode.chaos ? '-' : r.maxCombo + ' COMBO';
   $('rScore').textContent = r.score.toLocaleString() + '점';
+  $('rTimeRow').classList.toggle('hidden', !r.timed);
+  $('rTime').textContent = r.reason === 'clear' ? fmtTime(r.time) : '기록 없음 (미완주)';
+  $('rNewBest').textContent = r.timed ? '🎉 최고 기록 갱신!' : '🎉 최고 점수 갱신!';
   $('rTitle').textContent = r.title;
   $('rNewBest').classList.toggle('hidden', !r.isBest);
   $('rUnlock').textContent = r.unlocked.length ? '🔓 새 캐릭터: ' + r.unlocked.map(b => b.emoji + ' ' + b.name).join(', ') : '';
@@ -983,6 +1003,10 @@ function goHome() {
 // =====================================================================
 // 그리기
 // =====================================================================
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = sec - m * 60;
+  return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+}
 function rrect(x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
@@ -1432,7 +1456,14 @@ function drawBottom(t) {
   // 점수
   ctx.fillStyle = 'rgba(12,16,34,.7)'; rrect(8, H - 34, 96, 26, 13); ctx.fill();
   ctx.fillStyle = '#ffd166'; ctx.font = '800 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(`${score.toLocaleString()}점`, 56, H - 20);
+  ctx.fillText(mode.timed ? fmtTime(playTime) : `${score.toLocaleString()}점`, 56, H - 20);
+  if (mode.chase && guard && state === 'play') {
+    const gd = guard.room - roomOf(ball.y);
+    const txt = fx.ice > 0 ? '👮 얼음!' : gd > 0 ? `👮 ${gd}층 위` : '👮 같은 층!';
+    ctx.fillStyle = gd <= 0 ? `rgba(200,40,60,${.75 + .2 * Math.sin(t * 12)})` : gd <= 2 ? 'rgba(160,60,40,.8)' : 'rgba(12,16,34,.7)';
+    rrect(8, H - 64, 96, 26, 13); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif'; ctx.fillText(txt, 56, H - 50);
+  }
   // 콤보
   if (combo > 0 && !mode.chaos) {
     const ci = comboInfo();
@@ -1530,11 +1561,11 @@ function render(t) {
     ctx.strokeText(p.text, p.x, py); ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, py);
     ctx.globalAlpha = 1;
   }
-  if (state !== 'title') drawCeiling(t);
+  if (state !== 'title' && !mode.chase) drawCeiling(t);
   ctx.restore();
 
   if (state === 'play') {
-    const gap = ball.y - ceilY;
+    const gap = mode.chase ? (guard ? (guard.room - roomOf(ball.y)) * FH + 120 : 999) : ball.y - ceilY;
     if (gap < 280) {
       const k = (1 - gap / 280);
       const a = k * .55 * (.55 + .45 * Math.sin(t * (8 + k * 10)));
@@ -1553,7 +1584,7 @@ function render(t) {
   if (hitFlash > 0) { ctx.fillStyle = `rgba(255,255,255,${hitFlash})`; ctx.fillRect(0, 0, W, H); }
   if (state === 'play' && ceilDelay > 0) {
     ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '800 15px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('천장이 곧 내려와요! 구멍으로 쏙~', W / 2, H - 52);
+    ctx.fillText(mode.chase ? '경비원이 곧 출동해요! 구멍으로 쏙~' : '천장이 곧 내려와요! 구멍으로 쏙~', W / 2, H - 52);
   }
   if (state !== 'title') { drawBanner(); drawChat(t); drawBottom(t); drawHUD(t); }
   if (state === 'clear') drawClearOverview();
@@ -1578,7 +1609,7 @@ function makeCard() {
   g.fillStyle = '#c0682a'; g.fillText('Tiptoe Tower', CW / 2, 220);
   g.fillStyle = '#ffc94d'; g.fillText('Tiptoe Tower', CW / 2, 210);
   g.font = `600 40px ${font}`; g.fillStyle = '#aab3cf';
-  g.fillText(`${r.mode} 모드 · ${REASONS[r.reason]}`, CW / 2, 290);
+  g.fillText(`${r.mode} 모드 · ${r.timed && r.reason === 'clear' ? '기록 ' + fmtTime(r.time) : REASONS[r.reason]}`, CW / 2, 290);
   // 실제로 깨운 집이 불 켜진 아파트
   const rows = r.lit, bx = 300, by = 360, bw = 480, bh = 800, rh = bh / Math.max(1, rows.length);
   g.fillStyle = '#1b2244'; g.fillRect(bx, by, bw, bh);
@@ -1636,7 +1667,8 @@ function buildMenu() {
   $('charDesc').textContent = `${BD.name} — ${BD.desc}`;
   $('startBtn').textContent = MODES[modeId].endless ? '100층에서 끝까지' : '100층에서 출발';
   const best = store.get(bestKey(), 0);
-  $('bestText').textContent = best > 0 ? `${MODES[modeId].name} 최고 점수 ${best.toLocaleString()}점` : '';
+  $('bestText').textContent = !best ? '' : MODES[modeId].timed ? `타임어택 최고 기록 ${fmtTime(best)}`
+    : `${MODES[modeId].name} 최고 점수 ${best.toLocaleString()}점`;
 }
 
 // =====================================================================
