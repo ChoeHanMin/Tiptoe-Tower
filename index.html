@@ -25,10 +25,10 @@
   .chip.on{background:#ffd166;color:#3a2410}
   .desc{margin-top:6px;font-size:12px;color:#aab3cf;min-height:16px}
   .chars{display:flex;gap:6px;margin-top:6px}
-  .cb{width:44px;height:44px;border-radius:12px;border:2px solid transparent;background:#2a3560;font-size:22px;cursor:pointer;position:relative;padding:0}
+  .cb{width:44px;height:44px;border-radius:12px;border:2px solid transparent;background:#2a3560;cursor:pointer;padding:0;display:grid;place-items:center}
+  .cb img{width:34px;height:34px;display:block}
   .cb.on{border-color:#ffd166;background:#3b4a7a}
   .cb.locked{filter:grayscale(1);opacity:.45}
-  .cb.locked::after{content:"🔒";position:absolute;right:-4px;bottom:-4px;font-size:13px}
   .hint{margin-top:10px;font-size:12px;color:#8f9aba}
   .btn{margin-top:14px;border:0;border-radius:16px;background:#ffd166;color:#3a2410;font:inherit;font-weight:900;
     font-size:20px;padding:13px 0;width:240px;box-shadow:0 5px 0 #c9771f;cursor:pointer}
@@ -54,7 +54,6 @@
   <canvas id="c"></canvas>
 
   <div id="startScreen" class="overlay">
-    <div class="logo">🏢</div>
     <h1>Tiptoe Tower</h1>
     <div class="tag">딱딱한 바닥에서 튀면 <b>쿵!</b> 아랫집이 깨요.<br>폭신한 <span class="pink">이불</span> 위는 조용해요.</div>
     <div class="label">모드</div>
@@ -80,7 +79,7 @@
     </div>
     <div class="title-badge">당신의 칭호</div>
     <div class="title-name" id="rTitle"></div>
-    <div class="newbest hidden" id="rNewBest">🎉 최고 점수 갱신!</div>
+    <div class="newbest hidden" id="rNewBest">최고 점수 갱신!</div>
     <div class="unlock" id="rUnlock"></div>
     <button class="btn" id="retryBtn">다시 하기</button>
     <button class="btn sub" id="cardBtn">결과 카드 만들기</button>
@@ -165,16 +164,16 @@ const MODES = {
   time:    { name: '타임어택', desc: '최대한 빨리 1층 도착! (클리어해야 기록 인정)', noiseMul: 1, timed: true }
 };
 const BALLS = [
-  { id: 'basic',   emoji: '🏐', name: '기본 공',   desc: '균형형', grav: 1, noise: 1, move: 1, accel: 14, scoreMul: 1 },
-  { id: 'bowling', emoji: '🎳', name: '볼링공',   desc: '빠른 낙하·큰 소음 (점수 ×1.3)', grav: 1.4, noise: 1.6, move: 1, accel: 14, scoreMul: 1.3,
+  { id: 'basic',   name: '기본 공',   desc: '균형형', grav: 1, noise: 1, move: 1, accel: 14, scoreMul: 1 },
+  { id: 'bowling', name: '볼링공',   desc: '빠른 낙하·큰 소음 (점수 ×1.3)', grav: 1.4, noise: 1.6, move: 1, accel: 14, scoreMul: 1.3,
     unlock: '누적 점수 5,000점', ok: s => s.total >= 5000 },
-  { id: 'feather', emoji: '🪶', name: '깃털 공',   desc: '느린 낙하·작은 소음', grav: .65, noise: .6, move: .9, accel: 12, scoreMul: 1,
+  { id: 'feather', name: '깃털 공',   desc: '느린 낙하·작은 소음', grav: .65, noise: .6, move: .9, accel: 12, scoreMul: 1,
     unlock: '이웃 0명 깨우고 20층 내려가기', ok: s => s.quiet20 },
-  { id: 'ghost',   emoji: '👻', name: '유령 공',   desc: '6초마다 1초간 바닥 통과', grav: 1, noise: 1, move: 1, accel: 14, scoreMul: 1,
+  { id: 'ghost',   name: '유령 공',   desc: '6초마다 1초간 바닥 통과', grav: 1, noise: 1, move: 1, accel: 14, scoreMul: 1,
     unlock: '1층 탈출 성공', ok: s => s.clears >= 1 },
-  { id: 'hamster', emoji: '🐹', name: '햄스터 공', desc: '빠른 좌우 이동', grav: 1, noise: 1, move: 1.4, accel: 20, scoreMul: 1,
+  { id: 'hamster', name: '햄스터 공', desc: '빠른 좌우 이동', grav: 1, noise: 1, move: 1.4, accel: 20, scoreMul: 1,
     unlock: '한 판에 50층 내려가기', ok: s => s.maxFloors >= 50 },
-  { id: 'ice',     emoji: '🧊', name: '얼음 공',   desc: '쭉쭉 미끄러짐', grav: 1, noise: .9, move: 1.2, accel: 2.8, scoreMul: 1.1,
+  { id: 'ice',     name: '얼음 공',   desc: '쭉쭉 미끄러짐', grav: 1, noise: .9, move: 1.2, accel: 2.8, scoreMul: 1.1,
     unlock: '10 콤보 달성', ok: s => s.maxCombo >= 10 }
 ];
 const isUnlocked = b => !b.ok || b.ok(stats);
@@ -205,7 +204,8 @@ const zoneIdx = n => { const zf = zoneFloor(n); return ZONES.findIndex(z => zf >
 
 // 주민 성격
 const NEED = { normal: 1, heavy: 3, sensitive: 1, baby: 1, grandpa: 1, gamer: Infinity };
-const AVATAR = { normal: '🙂', heavy: '😴', sensitive: '😡', baby: '👶', grandpa: '👴', gamer: '🎮', office: '🏢', guard: '👮', dog: '🐶', praise: '😊', system: '✨' };
+const BADGE = { normal: '#4a5a8a', heavy: '#56607e', sensitive: '#c8484f', baby: '#d46a98', grandpa: '#8a6a4a', gamer: '#3d6fd6',
+  office: '#8a3040', guard: '#2f4f8f', dog: '#a87040', praise: '#3f9c6a', system: '#7a5ac8', again: '#6a5a7a', chaos: '#c86a2a' };
 const LINES = {
   normal: ['윗집 지금 뭐 하시는 거예요?', '저희 집도 방금 쿵 소리 났어요.', '아니 무슨 볼링 치세요?', '새벽 3시에 이게 맞나요...',
     '천장 무너지는 줄 ㄷㄷ', '방금 그 소리 뭐예요??', '내일 출근인데요...', '윗집 혹시 줄넘기 하세요?', '쿵쿵쿵... 실화냐', '자다가 심장 떨어질 뻔'],
@@ -470,7 +470,7 @@ function chat(name, text, kind) {
 function checkComplaints() {
   if (officeStage < 1 && complaints >= 5) { officeStage = 1; chat('관리사무소', '현재 소음 발생 위치를 확인 중입니다.', 'office'); }
   if (officeStage < 2 && complaints >= 9) { officeStage = 2; chat('관리사무소', '계속되면 경비원이 출동합니다.', 'office'); }
-  if (!guard && complaints >= GUARD_AT()) spawnGuard('민원 폭주! 경비원 출동합니다 🚨');
+  if (!guard && complaints >= GUARD_AT()) spawnGuard('민원 폭주! 경비원 출동합니다.');
 }
 function spawnGuard(msg) {
   if (guard) return;
@@ -481,7 +481,7 @@ function spawnGuard(msg) {
 }
 function startChase() {
   guard = { room: TOP, x: ball.x < W / 2 ? W - 22 : 22, followT: 0, step: 0, appear: 0 };
-  chat('경비실', '100층에서 쿵 소리 신고 접수! 지금 올라갑니다 🚨', 'guard');
+  chat('경비실', '100층에서 쿵 소리 신고 접수! 지금 올라갑니다.', 'guard');
   SFX.whistle();
 }
 function breakCombo() {
@@ -671,7 +671,7 @@ function passFloors(room) {
   const zi = zoneIdx(room);
   if (zi !== prevZone && !(mode.endless === false && room <= 1)) {
     banner = { title: `${floorName(room)} · ${ZONES[zi].name}`, sub: ZONES[zi].sub, t: 0, color: '#ffd166', dur: 2 };
-    if (zi === 5) spawnGuard('순찰 구역 진입. 경비원이 순찰 중입니다 🚨');
+    if (zi === 5) spawnGuard('순찰 구역 진입. 경비원이 순찰 중입니다.');
   }
   if (!quiet20 && woke === 0 && TOP - room >= 20) quiet20 = true;
   if (!mode.endless && room <= 1) endGame('clear');
@@ -679,13 +679,13 @@ function passFloors(room) {
 
 // ---------- 아이템 ----------
 const ITEMS = {
-  mat:     { emoji: '🔇', name: '방음 매트',     color: '#7ee0a1', msg: '방음 매트! 5초간 무소음' },
-  feather: { emoji: '🪶', name: '깃털',          color: '#e8ecf8', msg: '깃털! 5초간 사뿐사뿐' },
-  ice:     { emoji: '⏸️', name: '얼음 시계',     color: '#9fd8ff', msg: '얼음 시계! 천장 정지' },
-  spray:   { emoji: '💤', name: '수면 스프레이', color: '#c9a8ff', msg: '수면 스프레이! 3명 재움' },
-  ghost:   { emoji: '👻', name: '유령 모드',     color: '#e8ecf8', msg: '유령 모드! 3초간 통과' },
-  letter:  { emoji: '💌', name: '사과 편지',     color: '#f7a8c8', msg: '사과 편지! 소음 -30%' },
-  bomb:    { emoji: '💣', name: '소음 폭탄',     color: '#ff8a8a', msg: '소음 폭탄! 5층 직행' }
+  mat:     { name: '방음 매트',     color: '#7ee0a1', msg: '방음 매트! 5초간 무소음' },
+  feather: { name: '깃털',          color: '#e8ecf8', msg: '깃털! 5초간 사뿐사뿐' },
+  ice:     { name: '얼음 시계',     color: '#9fd8ff', msg: '얼음 시계! 천장 정지' },
+  spray:   { name: '수면 스프레이', color: '#c9a8ff', msg: '수면 스프레이! 3명 재움' },
+  ghost:   { name: '유령 모드',     color: '#e8ecf8', msg: '유령 모드! 3초간 통과' },
+  letter:  { name: '사과 편지',     color: '#f7a8c8', msg: '사과 편지! 소음 -30%' },
+  bomb:    { name: '소음 폭탄',     color: '#ff8a8a', msg: '소음 폭탄! 5층 직행' }
 };
 function useItem(it) {
   const info = ITEMS[it.type];
@@ -706,7 +706,7 @@ function useItem(it) {
         const f = wokenList.pop(), nb = f.neighbor;
         if (nb && nb.awake) { nb.awake = false; nb.hits = 0; nb.bubble = 0; nb.knock = 0; nb.cry = 0; woke--; c++; }
       }
-      chat('시스템', c ? `수면 스프레이 살포! 주민 ${c}명이 다시 잠들었어요 💤` : '수면 스프레이... 그런데 깬 사람이 없네요', 'system');
+      chat('시스템', c ? `수면 스프레이 살포! 주민 ${c}명이 다시 잠들었어요.` : '수면 스프레이... 그런데 깬 사람이 없네요', 'system');
       break;
     }
     case 'bomb': {
@@ -980,10 +980,10 @@ function showResult() {
   $('rScore').textContent = r.score.toLocaleString() + '점';
   $('rTimeRow').classList.toggle('hidden', !r.timed);
   $('rTime').textContent = r.reason === 'clear' ? fmtTime(r.time) : '기록 없음 (미완주)';
-  $('rNewBest').textContent = r.timed ? '🎉 최고 기록 갱신!' : '🎉 최고 점수 갱신!';
+  $('rNewBest').textContent = r.timed ? '최고 기록 갱신!' : '최고 점수 갱신!';
   $('rTitle').textContent = r.title;
   $('rNewBest').classList.toggle('hidden', !r.isBest);
-  $('rUnlock').textContent = r.unlocked.length ? '🔓 새 캐릭터: ' + r.unlocked.map(b => b.emoji + ' ' + b.name).join(', ') : '';
+  $('rUnlock').textContent = r.unlocked.length ? '새 캐릭터 해금: ' + r.unlocked.map(b => b.name).join(', ') : '';
   $('resultScreen').classList.remove('hidden');
 }
 function start() {
@@ -1006,6 +1006,10 @@ function goHome() {
 function fmtTime(sec) {
   const m = Math.floor(sec / 60), s = sec - m * 60;
   return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+}
+function rrectOn(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
 function rrect(x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
@@ -1089,7 +1093,7 @@ function drawResident(nb, x, y, A, t) {
   }
   if (tp === 'sensitive') {
     angryFace(x, y, '#ff8a5c', '#5a1a08');
-    ctx.strokeStyle = '#e0303a'; ctx.lineWidth = 2.2;   // 💢
+    ctx.strokeStyle = '#e0303a'; ctx.lineWidth = 2.2;   // 화난 표시
     const vx = x + 14, vy = y - 15;
     for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ctx.beginPath(); ctx.arc(vx + a * 4, vy + b * 4, 3, 0, Math.PI); ctx.stroke(); }
   } else if (tp === 'grandpa') {
@@ -1208,7 +1212,7 @@ function drawSlab(f, t) {
     ctx.fillStyle = '#c98a4b'; ctx.fillRect(0, y, W, SLAB);
     ctx.fillStyle = '#3f9c5a'; ctx.fillRect(0, y + SLAB, W, 14);
     ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.font = '800 14px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('🛝 놀이터', W / 2, y + 60);
+    ctx.fillText('놀이터', W / 2, y + 60);
     return;
   }
   const h = f.hole;
@@ -1330,8 +1334,7 @@ function drawSlab(f, t) {
     ctx.save(); ctx.shadowColor = info.color; ctx.shadowBlur = 14;
     ctx.fillStyle = 'rgba(20,26,52,.85)'; ctx.beginPath(); ctx.arc(it.x, by, 15, 0, 7); ctx.fill(); ctx.restore();
     ctx.strokeStyle = info.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(it.x, by, 15, 0, 7); ctx.stroke();
-    ctx.font = '17px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(info.emoji, it.x, by + 1); ctx.textBaseline = 'alphabetic';
+    drawItemIcon(ctx, it.type, it.x, by, 1);
   }
 }
 function drawGuard(t) {
@@ -1358,6 +1361,71 @@ const BALL_LOOK = {
   hamster: { fill: '#f6c28b', line: '#d9975a', ink: '#2b2020' },
   ice:     { fill: '#bfe9ff', line: '#7cc6ec', ink: '#1b3a55' }
 };
+function drawBallBody(c, id, lx, stun) {
+  const L = BALL_LOOK[id];
+  // 액세서리 (뒤)
+  if (id === 'hamster') { c.fillStyle = L.line; c.beginPath(); c.arc(-8, -10, 4.5, 0, 7); c.arc(8, -10, 4.5, 0, 7); c.fill(); }
+  if (id === 'feather') { c.fillStyle = '#cfe8ff'; c.beginPath(); c.ellipse(4, -15, 3, 8, .5, 0, 7); c.fill(); }
+  c.fillStyle = L.fill; c.beginPath(); c.arc(0, 0, R, 0, 7); c.fill();
+  c.strokeStyle = L.line; c.lineWidth = 1.5; c.stroke();
+  if (id === 'bowling') { c.fillStyle = '#121a33'; for (const [hx, hy] of [[-3, -8], [3, -8], [0, -4]]) { c.beginPath(); c.arc(hx + 4, hy, 1.6, 0, 7); c.fill(); } }
+  if (id === 'ice') { c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(-5, -6, 3, 5, -.6, 0, 7); c.fill(); }
+  c.fillStyle = L.ink;
+  if (stun) {
+    c.strokeStyle = L.ink; c.lineWidth = 1.6;
+    for (const ex of [-4.5, 4.5]) { c.beginPath(); c.moveTo(ex - 2, -4); c.lineTo(ex + 2, 0); c.moveTo(ex + 2, -4); c.lineTo(ex - 2, 0); c.stroke(); }
+  } else { c.beginPath(); c.arc(-4.5 + lx, -2, 1.9, 0, 7); c.arc(4.5 + lx, -2, 1.9, 0, 7); c.fill(); }
+  c.fillStyle = 'rgba(245,130,160,.6)';
+  c.beginPath(); c.ellipse(-8 + lx, 3, 2.8, 1.8, 0, 0, 7); c.ellipse(8 + lx, 3, 2.8, 1.8, 0, 0, 7); c.fill();
+}
+function ballIcon(id) {
+  try {
+    const c = document.createElement('canvas'); c.width = c.height = 68;
+    const g = c.getContext('2d'); g.translate(34, 36); g.scale(2.1, 2.1);
+    drawBallBody(g, id, 0, false);
+    return c.toDataURL();
+  } catch (e) { return ''; }
+}
+function drawItemIcon(c, type, x, y, k) {
+  c.save(); c.translate(x, y); c.scale(k, k); c.lineCap = 'round'; c.lineJoin = 'round';
+  switch (type) {
+    case 'mat':
+      c.fillStyle = '#7ee0a1'; rrectOn(c, -9, -7, 18, 14, 3); c.fill();
+      c.strokeStyle = '#2f7a4f'; c.lineWidth = 1.5;
+      for (const yy of [-3, 0, 3]) { c.beginPath(); c.moveTo(-6, yy); c.quadraticCurveTo(-3, yy - 2, 0, yy); c.quadraticCurveTo(3, yy + 2, 6, yy); c.stroke(); }
+      break;
+    case 'feather':
+      c.rotate(-.6); c.fillStyle = '#eef2ff'; c.beginPath(); c.ellipse(0, -1, 4.5, 10, 0, 0, 7); c.fill();
+      c.strokeStyle = '#9aa6c0'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, -10); c.lineTo(0, 11); c.stroke();
+      break;
+    case 'ice':
+      c.fillStyle = '#bfe9ff'; c.beginPath(); c.arc(0, 0, 9, 0, 7); c.fill();
+      c.strokeStyle = '#2a5a8a'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -6); c.moveTo(0, 0); c.lineTo(4, 2); c.stroke();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(-4, -5, 1.6, 0, 7); c.fill();
+      break;
+    case 'spray':
+      c.fillStyle = '#c9a8ff'; rrectOn(c, -5, -5, 10, 14, 2); c.fill();
+      c.fillStyle = '#7a5ac8'; c.fillRect(-3, -9, 6, 4); c.fillRect(3, -9, 4, 2);
+      c.fillStyle = 'rgba(220,200,255,.9)'; for (const [a, b2] of [[10, -9], [12, -5], [9, -2]]) { c.beginPath(); c.arc(a, b2, 1.3, 0, 7); c.fill(); }
+      break;
+    case 'ghost':
+      c.fillStyle = '#eef2ff'; c.beginPath(); c.moveTo(-8, 9); c.lineTo(-8, -2); c.arc(0, -2, 8, Math.PI, 0); c.lineTo(8, 9);
+      c.lineTo(5, 6); c.lineTo(2.5, 9); c.lineTo(0, 6); c.lineTo(-2.5, 9); c.lineTo(-5, 6); c.closePath(); c.fill();
+      c.fillStyle = '#2b2a40'; c.beginPath(); c.arc(-3, -2, 1.6, 0, 7); c.arc(3, -2, 1.6, 0, 7); c.fill();
+      break;
+    case 'letter':
+      c.fillStyle = '#f7a8c8'; c.fillRect(-9, -6, 18, 13);
+      c.strokeStyle = '#b85a82'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-9, -6); c.lineTo(0, 2); c.lineTo(9, -6); c.stroke();
+      break;
+    case 'bomb':
+      c.fillStyle = '#2b2b33'; c.beginPath(); c.arc(-1, 2, 7.5, 0, 7); c.fill();
+      c.strokeStyle = '#c9b089'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(3, -4); c.quadraticCurveTo(6, -9, 9, -8); c.stroke();
+      c.fillStyle = '#ffb347'; c.beginPath(); c.arc(9.5, -8.5, 2.2, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(-3.5, -1, 2, 0, 7); c.fill();
+      break;
+  }
+  c.restore();
+}
 function drawBall(t) {
   const b = ball, L = BALL_LOOK[BD.id];
   const s = b.sq;
@@ -1367,21 +1435,7 @@ function drawBall(t) {
   ctx.scale(sx, sy);
   if (b.ghost > 0) ctx.globalAlpha = .55 + .2 * Math.sin(t * 20);
   if (fx.mat > 0) { ctx.strokeStyle = 'rgba(126,224,161,.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, R + 5, 0, 7); ctx.stroke(); }
-  // 액세서리 (뒤)
-  if (BD.id === 'hamster') { ctx.fillStyle = L.line; ctx.beginPath(); ctx.arc(-8, -10, 4.5, 0, 7); ctx.arc(8, -10, 4.5, 0, 7); ctx.fill(); }
-  if (BD.id === 'feather') { ctx.fillStyle = '#cfe8ff'; ctx.beginPath(); ctx.ellipse(4, -15, 3, 8, .5, 0, 7); ctx.fill(); }
-  ctx.fillStyle = L.fill; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
-  ctx.strokeStyle = L.line; ctx.lineWidth = 1.5; ctx.stroke();
-  if (BD.id === 'bowling') { ctx.fillStyle = '#121a33'; for (const [hx, hy] of [[-3, -8], [3, -8], [0, -4]]) { ctx.beginPath(); ctx.arc(hx + 4, hy, 1.6, 0, 7); ctx.fill(); } }
-  if (BD.id === 'ice') { ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.ellipse(-5, -6, 3, 5, -.6, 0, 7); ctx.fill(); }
-  const lx = clamp((b.vx + b.push) / MOVE, -1, 1) * 2.5;
-  ctx.fillStyle = L.ink;
-  if (b.stun > 0) {
-    ctx.strokeStyle = L.ink; ctx.lineWidth = 1.6;
-    for (const ex of [-4.5, 4.5]) { ctx.beginPath(); ctx.moveTo(ex - 2, -4); ctx.lineTo(ex + 2, 0); ctx.moveTo(ex + 2, -4); ctx.lineTo(ex - 2, 0); ctx.stroke(); }
-  } else { ctx.beginPath(); ctx.arc(-4.5 + lx, -2, 1.9, 0, 7); ctx.arc(4.5 + lx, -2, 1.9, 0, 7); ctx.fill(); }
-  ctx.fillStyle = 'rgba(245,130,160,.6)';
-  ctx.beginPath(); ctx.ellipse(-8 + lx, 3, 2.8, 1.8, 0, 0, 7); ctx.ellipse(8 + lx, 3, 2.8, 1.8, 0, 0, 7); ctx.fill();
+  drawBallBody(ctx, BD.id, clamp((b.vx + b.push) / MOVE, -1, 1) * 2.5, b.stun > 0);
   ctx.restore();
   if (b.stun > 0) {
     ctx.fillStyle = '#ffd166'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
@@ -1431,7 +1485,7 @@ function drawChat(t) {
   let y = HUD_H + 6;
   ctx.fillStyle = 'rgba(12,16,34,.72)'; rrect(x, y, w, 20, 8); ctx.fill();
   ctx.fillStyle = '#cfd6ee'; ctx.font = '800 11px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('💬 입주민 단체방', x + 8, y + 10.5);
+  ctx.fillText('입주민 단체방', x + 8, y + 10.5);
   ctx.fillStyle = complaints >= 9 ? '#ff8a8a' : '#ffd166'; ctx.textAlign = 'right';
   ctx.fillText(`민원 ${complaints}건`, x + w - 8, y + 10.5);
   y += 24;
@@ -1441,7 +1495,10 @@ function drawChat(t) {
     const isOffice = c.kind === 'office' || c.kind === 'guard', isGood = c.kind === 'praise' || c.kind === 'system';
     ctx.fillStyle = isOffice ? 'rgba(80,30,40,.85)' : isGood ? 'rgba(30,70,55,.85)' : 'rgba(25,32,62,.85)';
     rrect(x, y, w, 30, 8); ctx.fill();
-    ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(AVATAR[c.kind] || '🙂', x + 15, y + 16);
+    const fm = c.name.match(/^(B?\d+)F/);
+    const badge = c.kind === 'office' ? '관' : c.kind === 'guard' ? '경' : c.kind === 'system' ? '·' : fm ? fm[1] : c.name[0];
+    ctx.fillStyle = BADGE[c.kind] || BADGE.normal; ctx.beginPath(); ctx.arc(x + 15, y + 15, 10, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${badge.length > 2 ? 8 : 10}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(badge, x + 15, y + 15.5);
     ctx.textAlign = 'left';
     ctx.fillStyle = isOffice ? '#ffb3b3' : '#8f9aba'; ctx.font = '700 9.5px sans-serif'; ctx.fillText(c.name, x + 30, y + 9);
     ctx.fillStyle = '#eef1fb'; ctx.font = '600 12px sans-serif';
@@ -1459,10 +1516,10 @@ function drawBottom(t) {
   ctx.fillText(mode.timed ? fmtTime(playTime) : `${score.toLocaleString()}점`, 56, H - 20);
   if (mode.chase && guard && state === 'play') {
     const gd = guard.room - roomOf(ball.y);
-    const txt = fx.ice > 0 ? '👮 얼음!' : gd > 0 ? `👮 ${gd}층 위` : '👮 같은 층!';
+    const txt = fx.ice > 0 ? '경비원 정지' : gd > 0 ? `경비원 ${gd}층 위` : '경비원 같은 층!';
     ctx.fillStyle = gd <= 0 ? `rgba(200,40,60,${.75 + .2 * Math.sin(t * 12)})` : gd <= 2 ? 'rgba(160,60,40,.8)' : 'rgba(12,16,34,.7)';
-    rrect(8, H - 64, 96, 26, 13); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = '800 13px sans-serif'; ctx.fillText(txt, 56, H - 50);
+    rrect(8, H - 64, 112, 26, 13); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = '800 12px sans-serif'; ctx.fillText(txt, 64, H - 50);
   }
   // 콤보
   if (combo > 0 && !mode.chaos) {
@@ -1477,15 +1534,15 @@ function drawBottom(t) {
   }
   // 효과 타이머
   const eff = [];
-  if (fx.mat > 0) eff.push(['🔇', fx.mat / 5]);
-  if (fx.feather > 0) eff.push(['🪶', fx.feather / 5]);
-  if (fx.ice > 0) eff.push(['⏸️', fx.ice / 5]);
-  if (ball.ghost > 0) eff.push(['👻', Math.min(1, ball.ghost / 3)]);
+  if (fx.mat > 0) eff.push(['mat', fx.mat / 5]);
+  if (fx.feather > 0) eff.push(['feather', fx.feather / 5]);
+  if (fx.ice > 0) eff.push(['ice', fx.ice / 5]);
+  if (ball.ghost > 0) eff.push(['ghost', Math.min(1, ball.ghost / 3)]);
   let ex = W - 24;
   for (const [e, k] of eff) {
     ctx.fillStyle = 'rgba(12,16,34,.75)'; ctx.beginPath(); ctx.arc(ex, H - 60, 15, 0, 7); ctx.fill();
     ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ex, H - 60, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.stroke();
-    ctx.font = '15px sans-serif'; ctx.fillStyle = '#fff'; ctx.fillText(e, ex, H - 59);
+    drawItemIcon(ctx, e, ex, H - 60, .85);
     ex -= 36;
   }
   ctx.textBaseline = 'alphabetic';
@@ -1624,7 +1681,7 @@ function makeCard() {
   }
   g.fillStyle = '#3f9c5a'; g.fillRect(0, by + bh, CW, 30);
   const line = mode.chaos
-    ? `나는 ${r.floorsDown}층을 내려가며\n이웃 ${r.woke}명을 깨웠다 🎉`
+    ? `나는 ${r.floorsDown}층을 내려가며\n이웃 ${r.woke}명을 깨웠다!`
     : r.woke === 0 ? `나는 ${r.floorsDown}층을 내려가며\n이웃을 한 명도 깨우지 않았다` : `나는 ${r.floorsDown}층을 내려가며\n이웃 ${r.woke}명을 깨웠다`;
   g.font = `900 70px ${font}`; g.fillStyle = '#fff';
   line.split('\n').forEach((l, i) => g.fillText(l, CW / 2, 1300 + i * 92));
@@ -1657,9 +1714,9 @@ function buildMenu() {
     const el = document.createElement('button');
     const un = isUnlocked(b);
     el.className = 'cb' + (b.id === BD.id ? ' on' : '') + (un ? '' : ' locked');
-    el.textContent = b.emoji; el.title = b.name;
+    const im = document.createElement('img'); im.src = ballIcon(b.id); im.alt = b.name; el.appendChild(im); el.title = b.name;
     el.onclick = () => {
-      if (!un) { $('charDesc').textContent = `🔒 ${b.name} — ${b.unlock}`; return; }
+      if (!un) { $('charDesc').textContent = `잠김 · ${b.name} — ${b.unlock}`; return; }
       BD = b; ballId = b.id; store.set('tiptoe.ball', b.id); buildMenu();
     };
     cr.appendChild(el);
