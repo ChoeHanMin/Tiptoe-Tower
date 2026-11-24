@@ -14,8 +14,9 @@
   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;color:#e8ecf8;background:rgba(14,20,42,.84);padding:18px;box-sizing:border-box}
   .hidden{display:none!important}
+  #shareScreen,#cardScreen{background:rgba(14,20,42,.97)}
   .logo{font-size:42px;line-height:1}
-  h1{margin:8px 0 4px;font-size:38px;font-weight:900;color:#ffc94d;letter-spacing:1px;
+  h1{margin:0 0 4px;font-size:36px;font-weight:900;color:#ffc94d;letter-spacing:1px;
     text-shadow:0 3px 0 #c0682a,0 6px 12px rgba(0,0,0,.35)}
   .tag{font-size:14px;line-height:1.55;color:#dfe4f3}
   .tag b{color:#fff}.pink{color:#f58bb5;font-weight:800}
@@ -39,7 +40,7 @@
   .reason{font-size:21px;font-weight:900;color:#ffd166;margin-bottom:10px}
   .mtag{font-size:12px;color:#8f9aba;margin-bottom:4px}
   .stats{width:260px;background:rgba(255,255,255,.06);border-radius:14px;padding:8px 16px;box-sizing:border-box}
-  .stats div{display:flex;justify-content:space-between;font-size:15px;line-height:1.9}
+  .stats div{display:flex;justify-content:space-between;font-size:15px;line-height:1.75}
   .stats b{color:#fff}
   .title-badge{margin:12px 0 2px;font-size:12px;color:#aab3cf}
   .title-name{font-size:23px;font-weight:900;color:#f58bb5}
@@ -47,6 +48,18 @@
   .unlock{color:#ffd166;font-weight:800;font-size:14px;margin-top:6px}
   #cardImg{max-width:100%;max-height:430px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   a.btn{display:block;text-decoration:none}
+  .row2{display:flex;gap:8px;width:240px;margin-top:10px}
+  .row2 .btn{margin-top:0;flex:1;font-size:15px;padding:11px 0}
+  .vs{width:260px;margin-top:10px;border-radius:14px;padding:10px 14px;box-sizing:border-box;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35)}
+  .vs .res{font-size:22px;font-weight:900;color:#ffd166}
+  .vs .res.lose{color:#ff9a9a}
+  .vs .cmp{font-size:13px;color:#dfe4f3;margin-top:4px;line-height:1.6}
+  .chbox{margin-top:14px;width:280px;border-radius:14px;padding:12px 14px;box-sizing:border-box;background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35)}
+  .chbox .who{font-size:17px;font-weight:900;color:#ffd166}
+  .chbox .rec{font-size:13px;color:#dfe4f3;margin-top:4px;line-height:1.6}
+  .field{width:240px;box-sizing:border-box;margin-top:12px;border-radius:12px;border:1px solid #3b4a7a;background:#1b2348;color:#fff;font:inherit;font-size:16px;padding:10px 12px}
+  .linkbox{width:260px;height:64px;box-sizing:border-box;margin-top:10px;border-radius:10px;border:1px solid #3b4a7a;background:#141a33;color:#aab3cf;font:12px/1.4 monospace;padding:8px;resize:none}
+  .ok{margin-top:8px;font-size:13px;color:#7ee0a1;min-height:18px}
 </style>
 </head>
 <body>
@@ -56,14 +69,24 @@
   <div id="startScreen" class="overlay">
     <h1>Tiptoe Tower</h1>
     <div class="tag">딱딱한 바닥에서 튀면 <b>쿵!</b> 아랫집이 깨요.<br>폭신한 <span class="pink">이불</span> 위는 조용해요.</div>
-    <div class="label">모드</div>
-    <div class="chips" id="modeChips"></div>
-    <div class="desc" id="modeDesc"></div>
+    <div id="pickBox" style="display:contents">
+      <div class="label">모드</div>
+      <div class="chips" id="modeChips"></div>
+      <div class="desc" id="modeDesc"></div>
+      <div class="label">난이도</div>
+      <div class="chips" id="diffChips"></div>
+      <div class="desc" id="diffDesc"></div>
+    </div>
+    <div class="chbox hidden" id="chBox">
+      <div class="who" id="chWho"></div>
+      <div class="rec" id="chRec"></div>
+    </div>
     <div class="label">캐릭터</div>
     <div class="chars" id="charRow"></div>
     <div class="desc" id="charDesc"></div>
     <button class="btn" id="startBtn">100층에서 출발</button>
     <div class="best" id="bestText"></div>
+    <button class="btn ghost hidden" id="chCancel">도전 취소하고 혼자 하기</button>
     <div class="hint">화면 왼쪽·오른쪽을 눌러 이동 (PC: ← →)</div>
   </div>
 
@@ -81,9 +104,23 @@
     <div class="title-name" id="rTitle"></div>
     <div class="newbest hidden" id="rNewBest">최고 점수 갱신!</div>
     <div class="unlock" id="rUnlock"></div>
+    <div class="vs hidden" id="rVs"><div class="res" id="vsRes"></div><div class="cmp" id="vsCmp"></div></div>
     <button class="btn" id="retryBtn">다시 하기</button>
-    <button class="btn sub" id="cardBtn">결과 카드 만들기</button>
+    <div class="row2">
+      <button class="btn sub" id="shareBtn">도전장 보내기</button>
+      <button class="btn sub" id="cardBtn">결과 카드</button>
+    </div>
     <button class="btn ghost" id="homeBtn">처음으로</button>
+  </div>
+
+  <div id="shareScreen" class="overlay hidden">
+    <div class="reason">도전장 보내기</div>
+    <div class="tag">친구가 같은 아파트 구조, 같은 모드·난이도로 도전해요.<br>친구 화면에 내 진행 층수가 실시간으로 표시돼요.</div>
+    <input class="field" id="nameInput" maxlength="10" placeholder="내 이름 (예: 민수)" autocomplete="off">
+    <button class="btn" id="makeLink">링크 공유하기</button>
+    <textarea class="linkbox hidden" id="linkBox" readonly></textarea>
+    <div class="ok" id="shareMsg"></div>
+    <button class="btn sub" id="closeShare">닫기</button>
   </div>
 
   <div id="cardScreen" class="overlay hidden">
@@ -177,6 +214,14 @@ const BALLS = [
     unlock: '10 콤보 달성', ok: s => s.maxCombo >= 10 }
 ];
 const isUnlocked = b => !b.ok || b.ok(stats);
+// 난이도: grav는 튀는 속도(높이는 같고 느리게), hole은 구멍 너비 추가, near는 구멍 옆 이불 확률
+const DIFFS = {
+  easy:   { name: '하', desc: '느리게 통통 · 구멍 넓고 이불이 구멍 옆에 자주', grav: .55, hole: 30, blanket: .25, near: .8,  ceil: .65, noise: .7,  guard: .75 },
+  normal: { name: '중', desc: '조금 느리게 · 이불 넉넉', grav: .75, hole: 14, blanket: .12, near: .5, ceil: .82, noise: .85, guard: .88 },
+  hard:   { name: '상', desc: '빠른 바운스 · 고수용', grav: 1, hole: 0, blanket: 0, near: .15, ceil: 1, noise: 1, guard: 1 }
+};
+let diffId = store.get('tiptoe.diff', 'normal'); if (!DIFFS[diffId]) diffId = 'normal';
+let DF = DIFFS[diffId];
 let modeId = store.get('tiptoe.mode', 'normal'); if (!MODES[modeId]) modeId = 'normal';
 let ballId = store.get('tiptoe.ball', 'basic');
 let mode = MODES[modeId];
@@ -293,7 +338,7 @@ function genFloor(n) {
   const zi = zoneIdx(n), z = ZONES[zi];
   const f = { n, zi, thumped: false, feats: [], movers: [], item: null, neighbor: null, dog: null, washOff: rng() * 3, shakeT: 0 };
   if (!mode.endless && n === 1) { f.ground = true; return f; }
-  const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8), 42, 130));
+  const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8) + DF.hole, 42, 150));
   const hx = n === TOP ? (chance(.5) ? rr(10, 60) : rr(W - 60 - hw, W - 10 - hw)) : rr(8, W - 8 - hw);
   f.hole = { x: hx, w: hw };
   const segs = [[0, hx], [hx + hw, W]].filter(s => s[1] - s[0] > 10);
@@ -325,9 +370,14 @@ function genFloor(n) {
   };
 
   if (n === TOP) place('blanket', 84, null, W / 2);
-  const bw = Math.round(78 - 24 * t);
-  if (chance(.95 - .55 * t)) place('blanket', bw);
-  if (chance(.55 - .45 * t)) place('blanket', bw);
+  const bw = Math.round(78 - 24 * t + DF.hole * .4);
+  // 구멍 바로 옆 이불 (쉬운 난이도일수록 자주)
+  if (n !== TOP && chance(DF.near - .3 * t * (DF.near < .5 ? 1 : .5))) {
+    const left = hx > W - hx - hw ? true : hx + hw > W - 20 ? true : hx < 20 ? false : chance(.5);
+    place('blanket', bw, null, left ? hx - bw / 2 - 4 : hx + hw + bw / 2 + 4);
+  }
+  if (chance(.95 - .55 * t + DF.blanket)) place('blanket', bw);
+  if (chance(.55 - .45 * t + DF.blanket)) place('blanket', bw);
   if (n <= 96 && chance(.22 + .25 * t)) place('block', 38);
 
   // 구역별 방해 요소
@@ -434,10 +484,16 @@ const COMBO_TIERS = [
 const comboInfo = () => { let r = null; for (const c of COMBO_TIERS) if (combo >= c.n) r = c; return r; };
 const GUARD_AT = () => mode.chaos ? 30 : 13;
 
-function reset() {
+let seed = 0, challenge = null, floorTimes = [], vsState = 0;
+function reset(keepSeed) {
   mode = MODES[modeId];
+  DF = DIFFS[diffId];
   TOP = 100;
-  rng = mode.seeded ? mulberry32(hashStr('tiptoe' + todayKey())) : Math.random;
+  if (challenge) seed = challenge.s;
+  else if (mode.seeded) seed = hashStr('tiptoe' + todayKey());
+  else if (!keepSeed) seed = (Math.random() * 4294967296) >>> 0;
+  rng = mulberry32(seed);
+  floorTimes = []; vsState = 0;
   floors = {}; genLow = TOP + 1;
   getF(mode.endless ? TOP - 30 : 1);
   ball = { x: W / 2, y: slabTop(TOP) - R - 40, vx: 0, vy: 0, push: 0, sq: 0, stun: 0, ghost: 0, ghostCycle: 6 };
@@ -460,7 +516,7 @@ function shards(x, y) {
   for (let i = 0; i < 18; i++) parts.push({ x: x + rand(-25, 25), y, vx: rand(-120, 120), vy: rand(-200, -40),
     r: rand(2, 4), life: rand(.5, .9), t: 0, color: '190,230,255', grav: 700, sq: true });
 }
-function addNoise(v) { noiseLv = clamp(noiseLv + v, 0, 100); }
+function addNoise(v) { noiseLv = clamp(noiseLv + (v > 0 ? v * DF.noise : v), 0, 100); }
 function chat(name, text, kind) {
   chats.push({ name, text, kind, t: 0 });
   if (chats.length > 12) chats.shift();
@@ -478,6 +534,49 @@ function spawnGuard(msg) {
   guard = { room, x: ball.x < W / 2 ? W - 22 : 22, followT: 0, step: 0, appear: 0 };
   chat('경비실', msg, 'guard');
   SFX.whistle();
+}
+// ---------- 도전장 ----------
+function oppFloor() {
+  if (!challenge) return TOP;
+  const t10 = playTime * 10, ts = challenge.t;
+  let c = 0; while (c < ts.length && ts[c] <= t10) c++;
+  return TOP - c;
+}
+function oppDone() { return challenge && playTime * 10 >= (challenge.tt || 0); }
+function b64e(str) { return btoa(String.fromCharCode(...new TextEncoder().encode(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function b64d(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); }
+function readChallenge() {
+  try {
+    const m = location.hash.match(/^#c=([A-Za-z0-9_-]+)$/);
+    if (!m) return null;
+    const c = JSON.parse(b64d(m[1]));
+    if (c.v !== 1 || !MODES[c.m] || !DIFFS[c.d] || !Array.isArray(c.t) || typeof c.sc !== 'number') return null;
+    c.n = String(c.n || '친구').slice(0, 10);
+    c.t = c.t.filter(x => typeof x === 'number').slice(0, 400);
+    return c;
+  } catch (e) { return null; }
+}
+const SHARE_BASE = 'https://choehanmin.github.io/Tiptoe-Tower/';
+function shareBase() {
+  if (/^https?:$/.test(location.protocol) && /github\.io$|localhost|127\.0\.0\.1/.test(location.hostname)) return location.origin + location.pathname;
+  return SHARE_BASE;
+}
+function makeChallengeUrl(name) {
+  const r = lastResult;
+  const c = { v: 1, s: r.seed, m: r.modeId, d: r.diffId, n: name || '친구', sc: r.score, w: r.woke, f: r.floorsDown, r: r.reason,
+    tm: Math.round(r.time * 10), tt: Math.round(r.time * 10), t: r.times };
+  return shareBase() + '#c=' + b64e(JSON.stringify(c));
+}
+function vsResult(r) {
+  const c = challenge;
+  let me, op;
+  if (MODES[c.m].timed) {
+    const mc = r.reason === 'clear', oc = c.r === 'clear';
+    if (mc && oc) { me = -r.time * 10; op = -c.tm; }
+    else if (mc !== oc) { me = mc ? 1 : 0; op = oc ? 1 : 0; }
+    else { me = r.floorsDown; op = c.f; }
+  } else { me = r.score; op = c.sc; }
+  return me > op ? 1 : me < op ? -1 : 0;
 }
 function startChase() {
   guard = { room: TOP, x: ball.x < W / 2 ? W - 22 : 22, followT: 0, step: 0, appear: 0 };
@@ -548,7 +647,7 @@ function thump(f, x, base, label = '쿵!', color = '#ffb36b') {
 
 // ---------- 착지 ----------
 function bounceV() { return BOUNCE * Math.sqrt(gravity() / GRAV); }
-function gravity() { return GRAV * BD.grav * (fx.feather > 0 ? .45 : 1); }
+function gravity() { return GRAV * BD.grav * DF.grav * (fx.feather > 0 ? .45 : 1); }
 
 function land(f) {
   const x = ball.x, top = slabTop(f.n), bv = bounceV();
@@ -638,6 +737,7 @@ function land(f) {
 function passFloors(room) {
   for (let n = lowestRoom; n > room; n--) {
     const f = getF(n);
+    if (floorTimes.length < 400) floorTimes.push(Math.round(playTime * 10));
     const quiet = !f.thumped && !bombing;
     let pts = 10;
     if (quiet && !mode.chaos) {
@@ -674,6 +774,10 @@ function passFloors(room) {
     if (zi === 5) spawnGuard('순찰 구역 진입. 경비원이 순찰 중입니다.');
   }
   if (!quiet20 && woke === 0 && TOP - room >= 20) quiet20 = true;
+  if (challenge) {
+    const of = oppFloor();
+    if (room < of && vsState !== 1) { if (vsState !== 0 || TOP - room > 1) banner = { title: '추월!', sub: `${challenge.n}님보다 앞서는 중`, t: 0, color: '#8fe0a8', dur: 1.2 }; vsState = 1; }
+  }
   if (!mode.endless && room <= 1) endGame('clear');
 }
 
@@ -866,13 +970,20 @@ function update(dt, realDt) {
   const nr = roomOf(ball.y);
   if (nr < lowestRoom) passFloors(nr);
   if (state !== 'play') return;
+  if (challenge) {
+    const of = oppFloor();
+    if (of < lowestRoom && vsState !== 2) {
+      if (vsState === 1) { banner = { title: '추월당했어요!', sub: `${challenge.n}님이 앞서가요`, t: 0, color: '#ff9a9a', dur: 1.2 }; SFX.ouch(); }
+      vsState = 2;
+    }
+  }
 
   // 경비원
   const guardFrozen = mode.chase && fx.ice > 0;     // 추격 모드에선 얼음 시계가 경비원을 멈춤
   if (guard && !guardFrozen) {
     guard.appear = Math.min(1, guard.appear + dt * 2);
     const depthG = TOP - lowestRoom;
-    const followDelay = mode.chase ? Math.max(.4, .85 - depthG * .004) * (1 - noiseLv / 250) : 1.5;
+    const followDelay = (mode.chase ? Math.max(.4, .85 - depthG * .004) * (1 - noiseLv / 250) : 1.5) / DF.guard;
     const gr = roomOf(ball.y);
     if (guard.room > gr) {
       guard.followT += dt;
@@ -885,7 +996,7 @@ function update(dt, realDt) {
       }
     } else if (guard.room === gr) {
       guard.followT = 0;
-      const sp = mode.chase ? Math.min(140, 78 + depthG * .6) : Math.min(120, 62 + depthG * .5);
+      const sp = (mode.chase ? Math.min(140, 78 + depthG * .6) : Math.min(120, 62 + depthG * .5)) * DF.guard;
       const d = ball.x - guard.x;
       guard.x += Math.sign(d) * Math.min(Math.abs(d), sp * dt);
       guard.step += dt;
@@ -899,7 +1010,7 @@ function update(dt, realDt) {
   } else if (ceilDelay > 0) ceilDelay -= dt;
   else if (fx.ice <= 0) {
     const depth = TOP - lowestRoom;
-    let sp = 30 + Math.min(depth, 140) * .62;
+    let sp = (30 + Math.min(depth, 140) * .62) * DF.ceil;
     const gap = ball.y - ceilY;
     if (gap > 430) sp += (gap - 430) * .7;
     ceilY += sp * dt;
@@ -935,7 +1046,7 @@ function titleFor(w, floorsDown) {
   if (w <= 15) return '소문난 쿵쿵이';
   return '아파트 전설의 쿵쿵이';
 }
-const bestKey = () => modeId === 'daily' ? 'tiptoe.best.daily.' + todayKey() : 'tiptoe.best.' + modeId;
+const bestKey = () => (modeId === 'daily' ? 'tiptoe.best.daily.' + todayKey() : 'tiptoe.best.' + modeId) + '.' + diffId;
 let lastResult = null;
 function endGame(reason) {
   if (state !== 'play') return;
@@ -957,7 +1068,7 @@ function endGame(reason) {
   if (quiet20) stats.quiet20 = true;
   store.set('tiptoe.stats', stats);
   const unlocked = BALLS.filter(b => isUnlocked(b) && !before.includes(b.id));
-  lastResult = { reason, floorsDown, woke, score, maxCombo, time: playTime, timed: !!mode.timed, title: titleFor(woke, floorsDown), isBest, unlocked, mode: mode.name,
+  lastResult = { seed, modeId, diffId, times: floorTimes.slice(), reason, floorsDown, woke, score, maxCombo, time: playTime, timed: !!mode.timed, title: titleFor(woke, floorsDown), isBest, unlocked, mode: mode.name,
     lit: collectLit() };
   setTimeout(showResult, reason === 'clear' ? 3000 : 1000);
 }
@@ -970,6 +1081,7 @@ function collectLit() {
   }
   return rows;
 }
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 function showResult() {
   const r = lastResult;
   $('rMode').textContent = r.mode + ' 모드';
@@ -984,18 +1096,31 @@ function showResult() {
   $('rTitle').textContent = r.title;
   $('rNewBest').classList.toggle('hidden', !r.isBest);
   $('rUnlock').textContent = r.unlocked.length ? '새 캐릭터 해금: ' + r.unlocked.map(b => b.name).join(', ') : '';
+  $('rMode').textContent = `${r.mode} 모드 · 난이도 ${DIFFS[r.diffId].name}`;
+  $('rVs').classList.toggle('hidden', !challenge);
+  $('rUnlock').classList.toggle('hidden', !!challenge && !r.unlocked.length);
+  if (challenge) {
+    const v = vsResult(r), c = challenge;
+    $('vsRes').textContent = v > 0 ? `${c.n}님에게 승리!` : v < 0 ? `${c.n}님에게 패배` : '무승부';
+    $('vsRes').classList.toggle('lose', v < 0);
+    const fmt = (sc, f, w, tm, rs) => MODES[c.m].timed ? (rs === 'clear' ? fmtTime(tm) : `${f}층 (미완주)`) : `${sc.toLocaleString()}점 · ${f}층 · ${w}명`;
+    $('vsCmp').innerHTML = `나: ${fmt(r.score, r.floorsDown, r.woke, r.time, r.reason)}<br>${esc(c.n)}: ${fmt(c.sc, c.f, c.w, c.tm / 10, c.r)}`;
+    $('retryBtn').textContent = '다시 도전';
+    $('shareBtn').textContent = '반격 도전장';
+  } else { $('retryBtn').textContent = '다시 하기'; $('shareBtn').textContent = '도전장 보내기'; }
   $('resultScreen').classList.remove('hidden');
 }
 function start() {
   audio();
   reset();
   state = 'play';
-  for (const id of ['startScreen', 'resultScreen', 'cardScreen']) $(id).classList.add('hidden');
-  banner = { title: `${floorName(TOP)} · ${ZONES[0].name}`, sub: mode.chaos ? '최대한 많이 깨워라!' : mode.name + ' 모드', t: 0, color: '#ffd166', dur: 1.8 };
+  for (const id of ['startScreen', 'resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
+  banner = challenge ? { title: `${challenge.n}님과 대결!`, sub: `${mode.name} 모드 · 난이도 ${DF.name} · 같은 아파트`, t: 0, color: '#ffd166', dur: 2 }
+    : { title: `${floorName(TOP)} · ${ZONES[0].name}`, sub: (mode.chaos ? '최대한 많이 깨워라!' : mode.name + ' 모드') + ` · 난이도 ${DF.name}`, t: 0, color: '#ffd166', dur: 1.8 };
 }
 function goHome() {
   state = 'title'; reset();
-  $('resultScreen').classList.add('hidden'); $('cardScreen').classList.add('hidden');
+  for (const id of ['resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
   $('startScreen').classList.remove('hidden');
   buildMenu();
 }
@@ -1547,6 +1672,22 @@ function drawBottom(t) {
   }
   ctx.textBaseline = 'alphabetic';
 }
+function drawOpp(t) {
+  if (!challenge) return;
+  const x = 266, y = HUD_H + 6, w = 86, h = 46;
+  const of = oppFloor(), done = oppDone();
+  const ahead = of < lowestRoom;
+  ctx.fillStyle = ahead ? 'rgba(90,30,40,.85)' : 'rgba(25,60,45,.85)'; rrect(x, y, w, h, 10); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#cfd6ee'; ctx.font = '700 10px sans-serif';
+  let nm = challenge.n; while (ctx.measureText(nm).width > w - 10 && nm.length > 1) nm = nm.slice(0, -1);
+  ctx.fillText(nm, x + w / 2, y + 11);
+  ctx.fillStyle = '#fff'; ctx.font = '900 18px sans-serif';
+  const lbl = done ? (challenge.r === 'clear' ? '도착' : floorName(of)) : floorName(of);
+  ctx.fillText(lbl, x + w / 2, y + 30);
+  if (done && challenge.r !== 'clear') { ctx.fillStyle = '#ff9a9a'; ctx.font = '700 9px sans-serif'; ctx.fillText('탈락', x + w - 13, y + 11); }
+  ctx.textBaseline = 'alphabetic';
+}
 function drawBanner() {
   if (!banner) return;
   const b = banner, a = clamp(Math.min(b.t * 5, (b.dur - b.t) * 3), 0, 1);
@@ -1643,7 +1784,7 @@ function render(t) {
     ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '800 15px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(mode.chase ? '경비원이 곧 출동해요! 구멍으로 쏙~' : '천장이 곧 내려와요! 구멍으로 쏙~', W / 2, H - 52);
   }
-  if (state !== 'title') { drawBanner(); drawChat(t); drawBottom(t); drawHUD(t); }
+  if (state !== 'title') { drawBanner(); drawChat(t); drawBottom(t); drawOpp(t); drawHUD(t); }
   if (state === 'clear') drawClearOverview();
 }
 
@@ -1709,6 +1850,24 @@ function buildMenu() {
     mc.appendChild(b);
   }
   $('modeDesc').textContent = MODES[modeId].desc + (modeId === 'daily' ? ` (${todayKey()})` : '');
+  const dc = $('diffChips'); dc.innerHTML = '';
+  for (const id in DIFFS) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (id === diffId ? ' on' : '');
+    b.textContent = DIFFS[id].name; b.style.minWidth = '52px';
+    b.onclick = () => { diffId = id; store.set('tiptoe.diff', id); buildMenu(); };
+    dc.appendChild(b);
+  }
+  $('diffDesc').textContent = DIFFS[diffId].desc;
+  $('pickBox').classList.toggle('hidden', !!challenge);
+  $('chBox').classList.toggle('hidden', !challenge);
+  $('chCancel').classList.toggle('hidden', !challenge);
+  if (challenge) {
+    const c = challenge;
+    $('chWho').textContent = `${c.n}님의 도전장`;
+    const rec = MODES[c.m].timed ? (c.r === 'clear' ? `기록 ${fmtTime(c.tm / 10)}` : `${c.f}층까지 (미완주)`) : `${c.f}층 · 이웃 ${c.w}명 · ${c.sc.toLocaleString()}점`;
+    $('chRec').innerHTML = `${esc(rec)}<br>${MODES[c.m].name} 모드 · 난이도 ${DIFFS[c.d].name} · 같은 아파트 구조로 대결`;
+  }
   const cr = $('charRow'); cr.innerHTML = '';
   for (const b of BALLS) {
     const el = document.createElement('button');
@@ -1722,7 +1881,7 @@ function buildMenu() {
     cr.appendChild(el);
   }
   $('charDesc').textContent = `${BD.name} — ${BD.desc}`;
-  $('startBtn').textContent = MODES[modeId].endless ? '100층에서 끝까지' : '100층에서 출발';
+  $('startBtn').textContent = challenge ? '도전 수락' : MODES[modeId].endless ? '100층에서 끝까지' : '100층에서 출발';
   const best = store.get(bestKey(), 0);
   $('bestText').textContent = !best ? '' : MODES[modeId].timed ? `타임어택 최고 기록 ${fmtTime(best)}`
     : `${MODES[modeId].name} 최고 점수 ${best.toLocaleString()}점`;
@@ -1755,6 +1914,33 @@ addEventListener('blur', () => { input.keys.l = input.keys.r = false; input.ptr.
 
 $('startBtn').addEventListener('click', start);
 $('retryBtn').addEventListener('click', start);
+$('chCancel').addEventListener('click', () => {
+  challenge = null; modeId = store.get('tiptoe.mode', 'normal'); diffId = store.get('tiptoe.diff', 'normal');
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  buildMenu();
+});
+$('shareBtn').addEventListener('click', () => {
+  $('nameInput').value = store.get('tiptoe.name', '');
+  $('linkBox').classList.add('hidden'); $('shareMsg').textContent = '';
+  $('shareScreen').classList.remove('hidden');
+});
+$('closeShare').addEventListener('click', () => $('shareScreen').classList.add('hidden'));
+$('makeLink').addEventListener('click', () => {
+  const name = $('nameInput').value.trim().slice(0, 10) || '친구';
+  store.set('tiptoe.name', name);
+  const url = makeChallengeUrl(name), r = lastResult;
+  const text = `${name}님의 Tiptoe Tower 도전장! ${r.floorsDown}층 · 이웃 ${r.woke}명 · ${r.score.toLocaleString()}점. 이길 수 있어?`;
+  const box = $('linkBox'); box.value = url; box.classList.remove('hidden');
+  const msg = t => { $('shareMsg').textContent = t; };
+  const copy = () => {
+    try {
+      navigator.clipboard.writeText(text + '\n' + url).then(() => msg('링크를 복사했어요. 친구에게 붙여넣기 하세요!'),
+        () => { box.select(); msg('아래 링크를 길게 눌러 복사하세요'); });
+    } catch (e) { box.select(); msg('아래 링크를 길게 눌러 복사하세요'); }
+  };
+  if (navigator.share) navigator.share({ title: 'Tiptoe Tower 도전장', text, url }).then(() => msg('도전장을 보냈어요!'), copy);
+  else copy();
+});
 $('homeBtn').addEventListener('click', goHome);
 $('cardBtn').addEventListener('click', makeCard);
 $('closeCard').addEventListener('click', () => $('cardScreen').classList.add('hidden'));
@@ -1773,6 +1959,9 @@ function frame(now) {
   render(now / 1000);
   requestAnimationFrame(frame);
 }
+challenge = readChallenge();
+if (challenge) { modeId = challenge.m; diffId = challenge.d; }
+addEventListener('hashchange', () => { if (state === 'title') { const c = readChallenge(); if (c) { challenge = c; modeId = c.m; diffId = c.d; buildMenu(); } } });
 reset();
 buildMenu();
 requestAnimationFrame(frame);
