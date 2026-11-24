@@ -50,7 +50,7 @@ for base, items in PROPS.items():
     for i, (pos, lh) in items.items():
         add(f'{base}_{i}', Image.open(f'{SP}/{base}_{i}.png'), lh, dim=True); plist[base].append([f'{base}_{i}', pos])
 # 타이틀 (불투명 그림)
-for name, size in [('title_portrait', (720, 1080)), ('title_landscape', (1152, 768)), ('ending', (720, 1080))]:
+for name, size in [('title_portrait', (720, 1080)), ('title_landscape', (1152, 768)), ('ending', (720, 1080)), ('ending_landscape', (1280, 720))]:
     im = Image.open(f'{S}/assets_in/{name}.png').convert('RGB').resize(size, Image.LANCZOS)
     b = io.BytesIO(); im.save(b, 'WEBP', quality=72, method=6); out[name] = ['data:image/webp;base64,' + base64.b64encode(b.getvalue()).decode(), 1]
 js = ('<!-- SPRITES:BEGIN (자동 생성된 그림 데이터. 직접 고치지 마세요) -->\n<script>\nwindow.TT_SPRITES = ' + json.dumps(out, separators=(',', ':')) +
