@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "$code.matches(/^[A-Z0-9]{4}$/)",
+        ".write": "$code.matches(/^[A-Z0-9]{4}$/)",
+        "p": {
+          "$pid": {
+            "n": { ".validate": "newData.isString() && newData.val().length <= 10" }
+          }
+        }
+      }
+    }
+  }
+}

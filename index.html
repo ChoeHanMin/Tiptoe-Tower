@@ -20,7 +20,7 @@
     text-shadow:0 3px 0 #c0682a,0 6px 12px rgba(0,0,0,.35)}
   .tag{font-size:14px;line-height:1.55;color:#dfe4f3}
   .tag b{color:#fff}.pink{color:#f58bb5;font-weight:800}
-  .label{margin-top:14px;font-size:12px;color:#8f9aba;font-weight:700;letter-spacing:1px}
+  .label{margin-top:10px;font-size:12px;color:#8f9aba;font-weight:700;letter-spacing:1px}
   .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px;max-width:320px}
   .chip{border:0;border-radius:999px;background:#2a3560;color:#cfd6ee;font:inherit;font-size:13px;font-weight:800;padding:7px 12px;cursor:pointer}
   .chip.on{background:#ffd166;color:#3a2410}
@@ -59,6 +59,14 @@
   .chbox .rec{font-size:13px;color:#dfe4f3;margin-top:4px;line-height:1.6}
   .field{width:240px;box-sizing:border-box;margin-top:12px;border-radius:12px;border:1px solid #3b4a7a;background:#1b2348;color:#fff;font:inherit;font-size:16px;padding:10px 12px}
   .linkbox{width:260px;height:64px;box-sizing:border-box;margin-top:10px;border-radius:10px;border:1px solid #3b4a7a;background:#141a33;color:#aab3cf;font:12px/1.4 monospace;padding:8px;resize:none}
+  .mpcode{margin-top:4px;font-size:14px;color:#aab3cf}
+  .mpcode b{font-size:30px;letter-spacing:6px;color:#ffd166;display:block;font-family:monospace}
+  .plist{width:260px;margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .prow{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:8px 12px;font-size:14px}
+  .prow .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .prow .nm{flex:1;text-align:left;font-weight:800}
+  .prow .st{font-size:12px;color:#aab3cf}
+  .chip:disabled{opacity:.55;cursor:default}
   .ok{margin-top:8px;font-size:13px;color:#7ee0a1;min-height:18px}
 </style>
 </head>
@@ -85,6 +93,7 @@
     <div class="chars" id="charRow"></div>
     <div class="desc" id="charDesc"></div>
     <button class="btn" id="startBtn">100층에서 출발</button>
+    <button class="btn sub" id="mpBtn">실시간 대전</button>
     <div class="best" id="bestText"></div>
     <button class="btn ghost hidden" id="chCancel">도전 취소하고 혼자 하기</button>
     <div class="hint">화면 왼쪽·오른쪽을 눌러 이동 (PC: ← →)</div>
@@ -111,6 +120,30 @@
       <button class="btn sub" id="cardBtn">결과 카드</button>
     </div>
     <button class="btn ghost" id="homeBtn">처음으로</button>
+  </div>
+
+  <div id="mpScreen" class="overlay hidden">
+    <div class="reason">실시간 대전</div>
+    <div id="mpJoinBox" style="display:contents">
+      <div class="tag">친구와 같은 아파트를 동시에 내려가요. (최대 4명)<br>콤보 단계를 올리면 상대에게 소음 민원이 넘어가요.</div>
+      <input class="field" id="mpName" maxlength="10" placeholder="내 이름 (예: 민수)" autocomplete="off">
+      <button class="btn" id="mpCreate">방 만들기</button>
+      <div class="row2">
+        <input class="field" id="mpCode" maxlength="4" placeholder="방 코드 4자리" autocomplete="off" style="margin-top:0;flex:1;width:auto;min-width:0;text-transform:uppercase;letter-spacing:3px">
+        <button class="btn sub" id="mpJoin" style="flex:0 0 84px">참가</button>
+      </div>
+    </div>
+    <div id="mpRoomBox" class="hidden" style="display:contents">
+      <div class="mpcode">방 코드<b id="mpCodeShow"></b></div>
+      <div class="chips" id="mpModeChips"></div>
+      <div class="chips" id="mpDiffChips"></div>
+      <div class="desc" id="mpModeDesc"></div>
+      <div class="plist" id="mpPlayers"></div>
+      <button class="btn" id="mpStart">시작하기</button>
+      <button class="btn sub" id="mpInvite">초대 링크 복사</button>
+    </div>
+    <div class="ok" id="mpMsg"></div>
+    <button class="btn ghost" id="mpLeave">나가기</button>
   </div>
 
   <div id="shareScreen" class="overlay hidden">
@@ -249,7 +282,7 @@ const zoneIdx = n => { const zf = zoneFloor(n); return ZONES.findIndex(z => zf >
 
 // 주민 성격
 const NEED = { normal: 1, heavy: 3, sensitive: 1, baby: 1, grandpa: 1, gamer: Infinity };
-const BADGE = { normal: '#4a5a8a', heavy: '#56607e', sensitive: '#c8484f', baby: '#d46a98', grandpa: '#8a6a4a', gamer: '#3d6fd6',
+const BADGE = { mp: '#c86a2a', normal: '#4a5a8a', heavy: '#56607e', sensitive: '#c8484f', baby: '#d46a98', grandpa: '#8a6a4a', gamer: '#3d6fd6',
   office: '#8a3040', guard: '#2f4f8f', dog: '#a87040', praise: '#3f9c6a', system: '#7a5ac8', again: '#6a5a7a', chaos: '#c86a2a' };
 const LINES = {
   normal: ['윗집 지금 뭐 하시는 거예요?', '저희 집도 방금 쿵 소리 났어요.', '아니 무슨 볼링 치세요?', '새벽 3시에 이게 맞나요...',
@@ -474,7 +507,7 @@ const unitName = f => `${floorName(f.n - 1)} ${String(f.neighbor.unit).padStart(
 let state = 'title';
 let ball, cam, ceilY, ceilDelay, noiseLv, score, woke, lowestRoom, elapsed, combo, maxCombo, complaints, wokenList;
 let popups = [], parts = [], rings = [], chats = [], shake = 0, endReason = '', overT = 0, hitFlash = 0;
-let playTime = 0;
+let playTime = 0, freezeT = 0;
 let fx, guard, banner, slowT, heartT, comboTier, officeStage, bombing, quiet20;
 const input = { keys: { l: false, r: false }, ptr: new Map() };
 const COMBO_TIERS = [
@@ -489,7 +522,8 @@ function reset(keepSeed) {
   mode = MODES[modeId];
   DF = DIFFS[diffId];
   TOP = 100;
-  if (challenge) seed = challenge.s;
+  if (mp.playing) seed = mp.seed;
+  else if (challenge) seed = challenge.s;
   else if (mode.seeded) seed = hashStr('tiptoe' + todayKey());
   else if (!keepSeed) seed = (Math.random() * 4294967296) >>> 0;
   rng = mulberry32(seed);
@@ -745,6 +779,7 @@ function passFloors(room) {
       const ci = comboInfo();
       const tierNo = ci ? COMBO_TIERS.indexOf(ci) + 1 : 0;
       if (tierNo > comboTier) {
+        if (mp.playing) { mp.atk++; mpPatch({ atk: mp.atk }); popup(ball.x, ball.y - 80, '소음 민원 발사!', '#ffb36b', 16); }
         comboTier = tierNo;
         banner = { title: `${ci.name}`, sub: `${combo} COMBO · 점수 ×${ci.m}`, t: 0, color: '#8fe0a8', dur: 1.4 };
         SFX.combo(tierNo);
@@ -891,6 +926,13 @@ function update(dt, realDt) {
 
   if (state === 'over' || state === 'clear') { overT += realDt; return; }
   if (state !== 'play') return;
+  if (freezeT > 0) {
+    freezeT -= realDt; banner = null;
+    if (Math.ceil(freezeT) !== Math.ceil(freezeT + realDt)) SFX.blip();
+    if (freezeT <= 0) { banner = { title: '출발!', sub: `${mode.name} 모드 · 난이도 ${DF.name} · 같은 아파트`, t: 0, color: '#ffd166', dur: 1.4 }; SFX.combo(2); }
+    return;
+  }
+  mpTick();
 
   for (const k in fx) fx[k] = Math.max(0, fx[k] - dt);
   playTime += realDt;
@@ -1070,6 +1112,7 @@ function endGame(reason) {
   const unlocked = BALLS.filter(b => isUnlocked(b) && !before.includes(b.id));
   lastResult = { seed, modeId, diffId, times: floorTimes.slice(), reason, floorsDown, woke, score, maxCombo, time: playTime, timed: !!mode.timed, title: titleFor(woke, floorsDown), isBest, unlocked, mode: mode.name,
     lit: collectLit() };
+  if (mp.playing) mpPatch({ done: true, r: reason, sc: score, f: lowestRoom, w: woke, tm: Math.round(playTime * 10), rd: mp.round, hb: ++mp.hb });
   setTimeout(showResult, reason === 'clear' ? 3000 : 1000);
 }
 function collectLit() {
@@ -1097,7 +1140,8 @@ function showResult() {
   $('rNewBest').classList.toggle('hidden', !r.isBest);
   $('rUnlock').textContent = r.unlocked.length ? '새 캐릭터 해금: ' + r.unlocked.map(b => b.name).join(', ') : '';
   $('rMode').textContent = `${r.mode} 모드 · 난이도 ${DIFFS[r.diffId].name}`;
-  $('rVs').classList.toggle('hidden', !challenge);
+  $('rVs').classList.toggle('hidden', !challenge && !mp.playing);
+  $('shareBtn').classList.toggle('hidden', mp.playing);
   $('rUnlock').classList.toggle('hidden', !!challenge && !r.unlocked.length);
   if (challenge) {
     const v = vsResult(r), c = challenge;
@@ -1108,6 +1152,7 @@ function showResult() {
     $('retryBtn').textContent = '다시 도전';
     $('shareBtn').textContent = '반격 도전장';
   } else { $('retryBtn').textContent = '다시 하기'; $('shareBtn').textContent = '도전장 보내기'; }
+  if (mp.playing) { $('retryBtn').textContent = '대기실로'; renderMpResult(); }
   $('resultScreen').classList.remove('hidden');
 }
 function start() {
@@ -1673,6 +1718,7 @@ function drawBottom(t) {
   ctx.textBaseline = 'alphabetic';
 }
 function drawOpp(t) {
+  if (mp.playing) { drawMpOpp(t); return; }
   if (!challenge) return;
   const x = 266, y = HUD_H + 6, w = 86, h = 46;
   const of = oppFloor(), done = oppDone();
@@ -1785,6 +1831,12 @@ function render(t) {
     ctx.fillText(mode.chase ? '경비원이 곧 출동해요! 구멍으로 쏙~' : '천장이 곧 내려와요! 구멍으로 쏙~', W / 2, H - 52);
   }
   if (state !== 'title') { drawBanner(); drawChat(t); drawBottom(t); drawOpp(t); drawHUD(t); }
+  if (state === 'play' && freezeT > 0) {
+    ctx.fillStyle = 'rgba(10,14,30,.45)'; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ffd166'; ctx.font = '900 84px sans-serif';
+    ctx.fillText(String(Math.ceil(freezeT)), W / 2, H / 2 + 20);
+    ctx.fillStyle = '#dfe4f3'; ctx.font = '800 15px sans-serif'; ctx.fillText('모두 같은 아파트에서 동시에 출발!', W / 2, H / 2 + 60);
+  }
   if (state === 'clear') drawClearOverview();
 }
 
@@ -1913,7 +1965,7 @@ addEventListener('keyup', e => {
 addEventListener('blur', () => { input.keys.l = input.keys.r = false; input.ptr.clear(); });
 
 $('startBtn').addEventListener('click', start);
-$('retryBtn').addEventListener('click', start);
+$('retryBtn').addEventListener('click', () => { if (mp.on) openLobby(); else start(); });
 $('chCancel').addEventListener('click', () => {
   challenge = null; modeId = store.get('tiptoe.mode', 'normal'); diffId = store.get('tiptoe.diff', 'normal');
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
@@ -1941,9 +1993,276 @@ $('makeLink').addEventListener('click', () => {
   if (navigator.share) navigator.share({ title: 'Tiptoe Tower 도전장', text, url }).then(() => msg('도전장을 보냈어요!'), copy);
   else copy();
 });
-$('homeBtn').addEventListener('click', goHome);
+$('homeBtn').addEventListener('click', () => { if (mp.on) mpLeave(); goHome(); });
 $('cardBtn').addEventListener('click', makeCard);
 $('closeCard').addEventListener('click', () => $('cardScreen').classList.add('hidden'));
+
+
+// =====================================================================
+// 실시간 대전 (Firebase Realtime Database · REST + 실시간 스트림, SDK 없음)
+// =====================================================================
+// Firebase 콘솔 > Realtime Database 의 주소를 넣으면 실시간 대전이 켜집니다. (FIREBASE.md 참고)
+const FIREBASE_DB_URL = '';
+function dbBase() {
+  try {
+    const q = new URLSearchParams(location.search).get('db');   // 로컬 테스트용
+    if (q && (location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) return q.replace(/\/$/, '');
+  } catch (e) {}
+  return FIREBASE_DB_URL.replace(/\/$/, '');
+}
+const onWebHost = () => location.protocol === 'file:' || /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
+const mp = { on: false, code: '', id: Math.random().toString(36).slice(2, 10), room: null, es: null, round: null, playing: false,
+  seed: 0, last: 0, hb: 0, atk: 0, seenAtk: {}, seen: {}, seenK: {}, hbTimer: 0 };
+const MP_COLORS = ['#ffd166', '#7fc8ff', '#f58bb5', '#8fe0a8'];
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+async function dbReq(path, method = 'GET', body) {
+  const r = await fetch(`${dbBase()}/${path}.json`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!r.ok) throw new Error('db ' + r.status);
+  return r.json();
+}
+function mpPatch(obj) { if (mp.on) dbReq(`rooms/${mp.code}/p/${mp.id}`, 'PATCH', obj).catch(() => {}); }
+function mpMsg(t) { $('mpMsg').textContent = t || ''; }
+function setNode(root, parts, val) {
+  if (!parts.length) return val;
+  const r = root && typeof root === 'object' ? root : {};
+  const [k, ...rest] = parts;
+  const v = setNode(r[k], rest, val);
+  if (v === null || v === undefined) delete r[k]; else r[k] = v;
+  return Object.keys(r).length ? r : null;
+}
+function applyEvent(type, msg) {
+  const parts = String(msg.path || '/').split('/').filter(Boolean);
+  if (type === 'put') mp.room = setNode(mp.room, parts, msg.data);
+  else if (msg.data && typeof msg.data === 'object') for (const k in msg.data) mp.room = setNode(mp.room, parts.concat(k.split('/').filter(Boolean)), msg.data[k]);
+  onRoom();
+}
+function listen() {
+  if (mp.es) mp.es.close();
+  const es = new EventSource(`${dbBase()}/rooms/${mp.code}.json`);
+  for (const t of ['put', 'patch']) es.addEventListener(t, e => { try { applyEvent(t, JSON.parse(e.data)); } catch (err) {} });
+  es.addEventListener('cancel', () => mpMsg('서버가 연결을 거부했어요. 보안 규칙을 확인해 주세요'));
+  mp.es = es;
+}
+const mpPlayers = () => Object.entries((mp.room && mp.room.p) || {}).map(([id, p]) => Object.assign({ id }, p)).sort((a, b) => (a.j || 0) - (b.j || 0));
+const mpAlive = p => p.id === mp.id || performance.now() - (mp.seen[p.id] || 0) < 15000;
+function mpHostId() {
+  const ps = mpPlayers().filter(mpAlive);
+  if (mp.room && ps.some(p => p.id === mp.room.host)) return mp.room.host;
+  return ps.length ? ps[0].id : null;
+}
+const mpIsHost = () => mpHostId() === mp.id;
+const mpInRound = p => mp.room && p.rd === mp.room.round;
+function onRoom() {
+  const r = mp.room;
+  if (!r) { if (mp.on) { mpLeaveLocal(); mpMsg('방이 사라졌어요'); } return; }
+  const now = performance.now();
+  for (const p of mpPlayers()) {
+    const k = `${p.hb}|${p.f}|${p.done}`;
+    if (mp.seenK[p.id] !== k) { mp.seenK[p.id] = k; mp.seen[p.id] = now; }
+  }
+  if (mp.round === null) mp.round = r.round || 0;
+  if ((r.round || 0) > mp.round) { mp.round = r.round; mpStartRound(); return; }
+  if (mp.playing && state === 'play') for (const p of mpPlayers()) {
+    if (p.id === mp.id || !mpInRound(p)) continue;
+    const a = p.atk || 0;
+    if (a > (mp.seenAtk[p.id] || 0)) { mp.seenAtk[p.id] = a; mpReceiveAttack(p); }
+  }
+  renderLobby();
+  if (mp.playing && !$('resultScreen').classList.contains('hidden')) renderMpResult();
+}
+function mpReceiveAttack(p) {
+  if (!mode.chaos) addNoise(8);
+  chat(p.n || '상대', `${p.n || '상대'}님이 콤보 달성! 민원이 넘어왔어요 (소음 +8%)`, 'mp');
+  shake = Math.max(shake, .15); SFX.knock();
+}
+function mpTick() {
+  if (!mp.playing) return;
+  const now = performance.now();
+  if (now - mp.last < 450) return;
+  mp.last = now;
+  mpPatch({ f: lowestRoom, sc: score, w: woke, rd: mp.round, hb: ++mp.hb });
+}
+function mpStartRound() {
+  const r = mp.room;
+  modeId = r.m; diffId = r.d; mp.seed = r.seed; mp.playing = true; mp.atk = 0; mp.seenAtk = {};
+  challenge = null;
+  $('mpScreen').classList.add('hidden'); $('startScreen').classList.add('hidden');
+  start();
+  freezeT = 3;
+  mpPatch({ f: TOP, sc: 0, w: 0, done: false, r: null, tm: 0, atk: 0, rd: r.round, hb: ++mp.hb });
+}
+function randCode() { let c = ''; for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]; return c; }
+function mpName() {
+  const n = $('mpName').value.trim().slice(0, 10);
+  if (!n) { mpMsg('이름을 입력해 주세요'); $('mpName').focus(); return null; }
+  store.set('tiptoe.name', n); return n;
+}
+function mpReady() {
+  if (!onWebHost()) { mpMsg(`실시간 대전은 ${SHARE_BASE} 에서 할 수 있어요`); return false; }
+  if (!dbBase()) { mpMsg('실시간 대전 서버(Firebase)가 아직 설정되지 않았어요'); return false; }
+  return true;
+}
+async function mpCreate() {
+  const n = mpName(); if (!n || !mpReady()) return;
+  mpMsg('방 만드는 중...');
+  try {
+    let code = null;
+    for (let i = 0; i < 5 && !code; i++) { const c = randCode(); if (!(await dbReq(`rooms/${c}`))) code = c; }
+    if (!code) throw new Error('code');
+    await dbReq(`rooms/${code}`, 'PUT', { host: mp.id, m: modeId, d: diffId, seed: 0, round: 0, made: Date.now(),
+      p: { [mp.id]: { n, j: Date.now(), hb: 0, c: 0 } } });
+    mpEnter(code);
+  } catch (e) { mpMsg('방을 만들지 못했어요. 인터넷 연결을 확인해 주세요'); }
+}
+async function mpJoin() {
+  const n = mpName(); if (!n || !mpReady()) return;
+  const code = $('mpCode').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4}$/.test(code)) { mpMsg('방 코드 4자리를 입력해 주세요'); return; }
+  mpMsg('참가하는 중...');
+  try {
+    const room = await dbReq(`rooms/${code}`);
+    if (!room) { mpMsg('방을 찾을 수 없어요. 코드를 확인해 주세요'); return; }
+    const ps = room.p || {};
+    if (Object.keys(ps).length >= 4 && !ps[mp.id]) { mpMsg('방이 꽉 찼어요 (최대 4명)'); return; }
+    const used = Object.values(ps).map(p => p.c);
+    let c = 0; while (used.includes(c) && c < 3) c++;
+    await dbReq(`rooms/${code}/p/${mp.id}`, 'PATCH', { n, j: Date.now(), hb: 0, c });
+    mpEnter(code);
+  } catch (e) { mpMsg('참가하지 못했어요. 인터넷 연결을 확인해 주세요'); }
+}
+function mpEnter(code) {
+  mp.on = true; mp.code = code; mp.round = null; mp.room = null; mp.seen = {}; mp.seenK = {};
+  try { history.replaceState(null, '', location.pathname + location.search + '#r=' + code); } catch (e) {}
+  listen();
+  clearInterval(mp.hbTimer);
+  mp.hbTimer = setInterval(() => { if (mp.on && state !== 'play') mpPatch({ hb: ++mp.hb }); else if (mp.on) mpTick(); renderLobby(); }, 4000);
+  mpMsg('');
+  renderLobby();
+}
+function mpLeaveLocal() {
+  if (mp.es) mp.es.close();
+  clearInterval(mp.hbTimer);
+  mp.on = false; mp.playing = false; mp.room = null; mp.es = null; mp.code = '';
+  try { if (/^#r=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  renderLobby();
+}
+function mpLeave() {
+  if (mp.on) dbReq(`rooms/${mp.code}/p/${mp.id}`, 'DELETE').catch(() => {});
+  mpLeaveLocal();
+}
+function openLobby() {
+  for (const id of ['startScreen', 'resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
+  if (state !== 'title') { state = 'title'; reset(); }
+  mp.playing = false;
+  $('mpName').value = $('mpName').value || store.get('tiptoe.name', '');
+  $('mpScreen').classList.remove('hidden');
+  if (!mp.on && !onWebHost()) mpMsg(`실시간 대전은 ${SHARE_BASE} 에서 할 수 있어요`);
+  renderLobby();
+}
+function renderLobby() {
+  $('mpJoinBox').classList.toggle('hidden', mp.on);
+  $('mpRoomBox').classList.toggle('hidden', !mp.on);
+  if (!mp.on || !mp.room) return;
+  const r = mp.room, host = mpIsHost();
+  $('mpCodeShow').textContent = mp.code;
+  const mc = $('mpModeChips'); mc.innerHTML = '';
+  for (const id in MODES) {
+    if (id === 'endless') continue;
+    const b = document.createElement('button');
+    b.className = 'chip' + (id === r.m ? ' on' : ''); b.textContent = MODES[id].name; b.disabled = !host;
+    b.onclick = () => dbReq(`rooms/${mp.code}`, 'PATCH', { m: id }).catch(() => {});
+    mc.appendChild(b);
+  }
+  const dc = $('mpDiffChips'); dc.innerHTML = '';
+  for (const id in DIFFS) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (id === r.d ? ' on' : ''); b.textContent = '난이도 ' + DIFFS[id].name; b.disabled = !host;
+    b.onclick = () => dbReq(`rooms/${mp.code}`, 'PATCH', { d: id }).catch(() => {});
+    dc.appendChild(b);
+  }
+  $('mpModeDesc').textContent = (MODES[r.m] ? MODES[r.m].desc : '') + (host ? '' : ' · 방장이 정해요');
+  const pl = $('mpPlayers'); pl.innerHTML = '';
+  const hid = mpHostId();
+  const ps = mpPlayers();
+  for (const p of ps) {
+    const row = document.createElement('div'); row.className = 'prow';
+    const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = MP_COLORS[p.c || 0];
+    const nm = document.createElement('span'); nm.className = 'nm';
+    nm.textContent = (p.n || '?') + (p.id === mp.id ? ' (나)' : '') + (p.id === hid ? ' · 방장' : '');
+    const st = document.createElement('span'); st.className = 'st';
+    st.textContent = !mpAlive(p) ? '연결 끊김' : r.round && mpInRound(p) && !p.done ? `플레이 중 ${floorName(p.f || TOP)}` : '대기';
+    row.append(dot, nm, st); pl.appendChild(row);
+  }
+  const live = ps.filter(mpAlive).length;
+  const sb = $('mpStart');
+  sb.classList.toggle('hidden', !host);
+  sb.disabled = live < 2;
+  sb.textContent = live < 2 ? '친구를 기다리는 중...' : r.round ? '다음 판 시작' : `${live}명 시작하기`;
+  if (!host) mpMsg('방장이 시작하면 3초 뒤 출발해요');
+}
+function mpStartGame() {
+  if (!mp.on || !mpIsHost()) return;
+  const r = mp.room;
+  dbReq(`rooms/${mp.code}`, 'PATCH', { seed: (Math.random() * 4294967296) >>> 0, round: (r.round || 0) + 1, host: mp.id }).catch(() => mpMsg('시작하지 못했어요'));
+}
+function mpValue(p) {
+  // 높을수록 잘한 것
+  if (MODES[mp.room.m] && MODES[mp.room.m].timed) return p.r === 'clear' ? 1e9 - (p.tm || 0) : (TOP - (p.f || TOP));
+  return p.sc || 0;
+}
+function mpStanding(p) {
+  if (!p.done) return `플레이 중 · ${floorName(p.f || TOP)}`;
+  const timed = MODES[mp.room.m] && MODES[mp.room.m].timed;
+  const fl = TOP - (p.f || TOP);
+  if (timed) return p.r === 'clear' ? `완주 ${fmtTime((p.tm || 0) / 10)}` : `${fl}층 (탈락)`;
+  return `${(p.sc || 0).toLocaleString()}점 · ${fl}층 · ${p.w || 0}명`;
+}
+function renderMpResult() {
+  if (!mp.room) return;
+  const ps = mpPlayers().filter(p => mpInRound(p) && (p.done || mpAlive(p)));
+  const done = ps.filter(p => p.done).sort((a, b) => mpValue(b) - mpValue(a));
+  const playing = ps.filter(p => !p.done);
+  const all = done.concat(playing);
+  const myRank = done.findIndex(p => p.id === mp.id) + 1;
+  const finished = playing.length === 0;
+  $('vsRes').textContent = !finished ? '다른 플레이어를 기다리는 중...' : myRank === 1 ? '1위! 승리!' : `${myRank}위`;
+  $('vsRes').classList.toggle('lose', finished && myRank > 1);
+  $('vsCmp').innerHTML = all.map((p, i) => `${p.done ? (i + 1) + '위' : '·'} ${esc(p.n || '?')}${p.id === mp.id ? ' (나)' : ''} — ${esc(mpStanding(p))}`).join('<br>');
+}
+function drawMpOpp(t) {
+  const others = mpPlayers().filter(p => p.id !== mp.id && mpInRound(p));
+  const ahead = others.filter(p => !p.done ? (p.f || TOP) < lowestRoom : p.r === 'clear').length;
+  const x = 266, w = 86;
+  let y = HUD_H + 6;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(12,16,34,.8)'; rrect(x, y, w, 22, 8); ctx.fill();
+  ctx.fillStyle = ahead === 0 ? '#ffd166' : '#dfe4f3'; ctx.font = '900 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(`현재 ${ahead + 1}위 / ${others.length + 1}명`, x + w / 2, y + 11.5);
+  y += 26;
+  for (const p of others.sort((a, b) => (a.f || TOP) - (b.f || TOP)).slice(0, 3)) {
+    const out = p.done && p.r !== 'clear', dead = !mpAlive(p);
+    ctx.fillStyle = 'rgba(12,16,34,.8)'; rrect(x, y, w, 28, 8); ctx.fill();
+    ctx.fillStyle = MP_COLORS[p.c || 0]; ctx.beginPath(); ctx.arc(x + 10, y + 14, 4.5, 0, 7); ctx.fill();
+    ctx.textAlign = 'left'; ctx.fillStyle = '#cfd6ee'; ctx.font = '700 10px sans-serif';
+    let nm = p.n || '?'; while (ctx.measureText(nm).width > 34 && nm.length > 1) nm = nm.slice(0, -1);
+    ctx.fillText(nm, x + 18, y + 14.5);
+    ctx.textAlign = 'right'; ctx.font = '900 13px sans-serif';
+    ctx.fillStyle = out || dead ? '#ff9a9a' : '#fff';
+    ctx.fillText(dead ? '끊김' : p.done ? (p.r === 'clear' ? '도착' : '탈락') : floorName(p.f || TOP), x + w - 7, y + 14.5);
+    y += 32;
+  }
+  ctx.textBaseline = 'alphabetic';
+}
+$('mpBtn').addEventListener('click', () => { audio(); openLobby(); });
+$('mpCreate').addEventListener('click', mpCreate);
+$('mpJoin').addEventListener('click', mpJoin);
+$('mpStart').addEventListener('click', mpStartGame);
+$('mpLeave').addEventListener('click', () => { mpLeave(); mpMsg(''); $('mpScreen').classList.add('hidden'); goHome(); });
+$('mpInvite').addEventListener('click', () => {
+  const url = shareBase() + '#r=' + mp.code;
+  try { navigator.clipboard.writeText(url).then(() => mpMsg('초대 링크를 복사했어요'), () => mpMsg(url)); } catch (e) { mpMsg(url); }
+});
+addEventListener('pagehide', () => { if (mp.on) mpPatch({ hb: -1 }); });
 
 // =====================================================================
 // 루프
@@ -1960,15 +2279,17 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 challenge = readChallenge();
+const roomHash = location.hash.match(/^#r=([A-Za-z0-9]{4})$/);
 if (challenge) { modeId = challenge.m; diffId = challenge.d; }
 addEventListener('hashchange', () => { if (state === 'title') { const c = readChallenge(); if (c) { challenge = c; modeId = c.m; diffId = c.d; buildMenu(); } } });
 reset();
 buildMenu();
+if (roomHash) { openLobby(); $('mpCode').value = roomHash[1].toUpperCase(); mpMsg('이름을 입력하고 참가를 눌러 주세요'); }
 requestAnimationFrame(frame);
 // 테스트/디버그용
 window.__tt = { get state() { return state; }, get ball() { return ball; }, get score() { return score; }, get noise() { return noiseLv; },
   get woke() { return woke; }, get room() { return lowestRoom; }, get combo() { return maxCombo; }, get complaints() { return complaints; },
-  get guard() { return guard; }, getF, start, spawnGuard, setMode(m) { modeId = m; buildMenu(); }, setBall(id) { BD = BALLS.find(b => b.id === id); } };
+  get guard() { return guard; }, getF, start, spawnGuard, mp: () => mp, setMode(m) { modeId = m; buildMenu(); }, setBall(id) { BD = BALLS.find(b => b.id === id); } };
 })();
 </script>
 </body>
