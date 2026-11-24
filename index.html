@@ -131,7 +131,7 @@
     <div class="reason">실시간 대전</div>
     <div id="mpJoinBox" style="display:contents">
       <div class="tag">친구와 같은 아파트를 동시에 내려가요. (최대 4명)<br>콤보 단계를 올리면 상대에게 소음 민원이 넘어가요.</div>
-      <input class="field" id="mpName" maxlength="10" placeholder="내 이름 (예: 민수)" autocomplete="off">
+      <input class="field" id="mpName" maxlength="10" placeholder="닉네임 (실명 말고)" autocomplete="off">
       <button class="btn" id="mpCreate">방 만들기</button>
       <div class="row2">
         <input class="field" id="mpCode" maxlength="4" placeholder="방 코드 4자리" autocomplete="off" style="margin-top:0;flex:1;width:auto;min-width:0;text-transform:uppercase;letter-spacing:3px">
@@ -154,7 +154,7 @@
   <div id="shareScreen" class="overlay hidden">
     <div class="reason">도전장 보내기</div>
     <div class="tag">친구가 같은 아파트 구조, 같은 모드·난이도로 도전해요.<br>친구 화면에 내 진행 층수가 실시간으로 표시돼요.</div>
-    <input class="field" id="nameInput" maxlength="10" placeholder="내 이름 (예: 민수)" autocomplete="off">
+    <input class="field" id="nameInput" maxlength="10" placeholder="닉네임 (실명 말고)" autocomplete="off">
     <button class="btn" id="makeLink">링크 공유하기</button>
     <textarea class="linkbox hidden" id="linkBox" readonly></textarea>
     <div class="ok" id="shareMsg"></div>
@@ -829,7 +829,7 @@ const ITEMS = {
   spray:   { name: '수면 스프레이', color: '#c9a8ff', msg: '수면 스프레이! 3명 재움' },
   ghost:   { name: '유령 모드',     color: '#e8ecf8', msg: '유령 모드! 3초간 통과' },
   letter:  { name: '사과 편지',     color: '#f7a8c8', msg: '사과 편지! 소음 -30%' },
-  bomb:    { name: '소음 폭탄',     color: '#ff8a8a', msg: '소음 폭탄! 5층 직행' }
+  bomb:    { name: '소음 폭죽',     color: '#ff8a8a', msg: '소음 폭죽! 5층 직행' }
 };
 function useItem(it) {
   const info = ITEMS[it.type];
@@ -865,7 +865,7 @@ function useItem(it) {
       shake = .55; hitFlash = .5; SFX.bomb();
       for (let i = 0; i < 24; i++) parts.push({ x: ball.x, y: ball.y, vx: rand(-220, 220), vy: rand(-220, 120), r: rand(4, 9), life: rand(.4, .8), t: 0, color: '255,150,80' });
       bombing = true; if (target < lowestRoom) passFloors(target); bombing = false;
-      chat(pick(['주민', '아랫집']), pick(['방금 폭탄 터졌어요??', '전쟁 났나요', '건물 흔들렸어요!!']), 'normal');
+      chat(pick(['주민', '아랫집']), pick(['방금 뭐 터졌어요??', '천장 무너지는 줄 알았어요', '건물 흔들렸어요!!']), 'normal');
       break;
     }
   }
