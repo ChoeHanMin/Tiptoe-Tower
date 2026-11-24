@@ -20,6 +20,26 @@
     text-align:center;color:#e8ecf8;background:rgba(14,20,42,.84);padding:18px;box-sizing:border-box}
   .hidden{display:none!important}
   #shareScreen,#cardScreen{background:rgba(14,20,42,.97)}
+  /* 가로(PC) 화면: 높이 540에 맞춘 촘촘한 배치 */
+  #wrap.short .overlay{padding-block:8px}
+  #wrap.short h1{font-size:30px;margin:0}
+  #wrap.short .tag{font-size:12.5px;line-height:1.45}
+  #wrap.short #startScreen .label{display:none}
+  #wrap.short .chips{margin-top:8px}
+  #wrap.short .desc{margin-top:4px}
+  #wrap.short .btn{margin-top:10px;padding-block:10px}
+  #wrap.short .btn.sub{margin-top:8px;padding-block:9px}
+  #wrap.short .hint{margin-top:6px}
+  #wrap.short .best{margin-top:6px;min-height:0}
+  #wrap.short .reason{margin-bottom:6px;font-size:19px}
+  #wrap.short .stats div{line-height:1.55}
+  #wrap.short .title-badge{margin-top:6px}
+  #wrap.short .title-name{font-size:20px}
+  #wrap.short .vs{margin-top:6px;padding-block:6px}
+  #wrap.short .row2{margin-top:8px}
+  #wrap.short .row2 .btn{margin-top:0}
+  #wrap.short .plist{margin-top:8px}
+  #wrap.short #cardImg{max-height:330px}
   .logo{font-size:42px;line-height:1}
   h1{margin:0 0 4px;font-size:36px;font-weight:900;color:#ffc94d;letter-spacing:1px;
     text-shadow:0 3px 0 #c0682a,0 6px 12px rgba(0,0,0,.35)}
@@ -175,10 +195,10 @@
 // =====================================================================
 // 기본 설정
 // =====================================================================
-const H = 640;                   // 기준 화면 높이
-// 가로 폭은 화면 비율에 맞춰 360(세로 모바일)~720(가로 PC). K = 가로 배율 (구멍·이불·이동 속도에 곱함)
-let W = 360, K = 1, wideLocked = false, booted = false;
-const MAX_W = Math.round(H * 16 / 9);   // 1920×1080(16:9) 화면을 꽉 채우는 폭 = 1138
+// 화면 크기: 세로(모바일)는 360×640, 가로(PC)는 높이 540 기준으로 확대해서 16:9(1920×1080)면 960×540.
+// 넓은 층은 모바일 한 층 너비(약 360)의 구간 NSEC개를 이어 붙이고, 구간마다 모바일과 같은 크기의 구멍·이불·장애물을 둔다.
+let W = 360, H = 640, NSEC = 1, wideLocked = false, booted = false;
+const K = 1;                     // 크기 배율 (모바일과 같은 크기 유지)
 const FH = 170;                  // 한 층 높이
 const SLAB = 16;                 // 바닥 두께
 const R = 13;                    // 공 반지름
@@ -196,10 +216,14 @@ const $ = id => document.getElementById(id);
 let scale = 1, dpr = 1;
 function resize() {
   if (!wideLocked) {
-    const nw = Math.round(Math.min(MAX_W, Math.max(360, H * innerWidth / Math.max(1, innerHeight))));
-    if (nw !== W) {
-      W = nw; K = W / 360;
-      wrap.style.width = W + 'px';
+    const a = innerWidth / Math.max(1, innerHeight);
+    let nw, nh;
+    if (a <= 1.15) { nh = 640; nw = Math.round(Math.min(720, Math.max(360, 640 * a))); }
+    else { nh = 540; nw = Math.round(Math.min(960, 540 * a)); }
+    if (nw !== W || nh !== H) {
+      W = nw; H = nh; NSEC = Math.max(1, Math.round(W / 360));
+      wrap.style.width = W + 'px'; wrap.style.height = H + 'px';
+      wrap.classList.toggle('short', H < 600);
       if (booted) { reset(); }
     }
   }
@@ -387,103 +411,111 @@ function genFloor(n) {
   const zi = zoneIdx(n), z = ZONES[zi];
   const f = { n, zi, thumped: false, feats: [], movers: [], item: null, neighbor: null, dog: null, washOff: rng() * 3, shakeT: 0 };
   if (!mode.endless && n === 1) { f.ground = true; return f; }
-  const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8) + DF.hole, 42, 150) * K);
-  const hx = n === TOP ? (chance(.5) ? rr(10 * K, 60 * K) : rr(W - 60 * K - hw, W - 10 * K - hw)) : rr(8, W - 8 - hw);
-  f.hole = { x: hx, w: hw };
-  const segs = [[0, hx], [hx + hw, W]].filter(s => s[1] - s[0] > 10);
+  f.holes = [];
+  const sw = W / NSEC;
+  for (let si = 0; si < NSEC; si++) {
+    const ox = si * sw;
+    const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8) + DF.hole, 42, 150) * K);
+    const startSec = n === TOP && si === Math.floor(NSEC / 2);
+    const hx = ox + (startSec ? (chance(.5) ? rr(10, 60) : rr(sw - 60 - hw, sw - 10 - hw)) : rr(8, sw - 8 - hw));
+    f.holes.push({ x: hx, w: hw });
+    const segs = [[ox, hx], [hx + hw, ox + sw]].filter(s => s[1] - s[0] > 10);
 
-  const place = (type, w, extra, fixedX) => {
-    for (let k = 0; k < 16; k++) {
-      let x0;
-      if (fixedX !== undefined) x0 = fixedX - w / 2;
-      else {
-        const s = segs[Math.floor(rng() * segs.length)];
-        if (!s || s[1] - s[0] < w + 4) continue;
-        x0 = rr(s[0] + 2, s[1] - w - 2);
+    const place = (type, w, extra, fixedX) => {
+      for (let k = 0; k < 16; k++) {
+        let x0;
+        if (fixedX !== undefined) x0 = fixedX - w / 2;
+        else {
+          const s = segs[Math.floor(rng() * segs.length)];
+          if (!s || s[1] - s[0] < w + 4) continue;
+          x0 = rr(s[0] + 2, s[1] - w - 2);
+        }
+        const x1 = x0 + w, seg = segs.find(s => x0 >= s[0] && x1 <= s[1]);
+        if (!seg || f.feats.some(o => x0 < o.x1 + 6 && x1 > o.x0 - 6)) { if (fixedX !== undefined) return null; continue; }
+        const o = Object.assign({ type, x0, x1, seg }, extra || {});
+        f.feats.push(o);
+        return o;
       }
-      const x1 = x0 + w, seg = segs.find(s => x0 >= s[0] && x1 <= s[1]);
-      if (!seg || f.feats.some(o => x0 < o.x1 + 6 && x1 > o.x0 - 6)) { if (fixedX !== undefined) return null; continue; }
-      const o = Object.assign({ type, x0, x1, seg }, extra || {});
-      f.feats.push(o);
-      return o;
+      return null;
+    };
+    const addMover = kind => {
+      const s = segs.filter(s => s[1] - s[0] > 100);
+      if (!s.length) return;
+      const sg = s[Math.floor(rng() * s.length)];
+      const spec = { vac: { w: 44, sp: (32 + 26 * t) * K }, car: { w: 32, sp: (110 + 40 * t) * K }, cat: { w: 30, sp: 28 * K } }[kind];
+      f.movers.push({ kind, x: rr(sg[0] + 24, sg[1] - 24), w: spec.w, min: sg[0] + spec.w / 2, max: sg[1] - spec.w / 2,
+        dir: chance(.5) ? -1 : 1, speed: spec.sp, cool: 0 });
+    };
+
+    if (startSec) place('blanket', 84 * K, null, startX());
+    const bw = Math.round((78 - 24 * t + DF.hole * .4) * K);
+    // 구멍 바로 옆 이불 (쉬운 난이도일수록 자주)
+    if (n !== TOP && chance(DF.near - .3 * t * (DF.near < .5 ? 1 : .5))) {
+      const lx = hx - ox, left = lx > sw - lx - hw ? true : lx + hw > sw - 20 ? true : lx < 20 ? false : chance(.5);
+      place('blanket', bw, null, left ? hx - bw / 2 - 4 : hx + hw + bw / 2 + 4);
     }
-    return null;
-  };
-  const addMover = kind => {
-    const s = segs.filter(s => s[1] - s[0] > 100);
-    if (!s.length) return;
-    const sg = s[Math.floor(rng() * s.length)];
-    const spec = { vac: { w: 44, sp: (32 + 26 * t) * K }, car: { w: 32, sp: (110 + 40 * t) * K }, cat: { w: 30, sp: 28 * K } }[kind];
-    f.movers.push({ kind, x: rr(sg[0] + 24, sg[1] - 24), w: spec.w, min: sg[0] + spec.w / 2, max: sg[1] - spec.w / 2,
-      dir: chance(.5) ? -1 : 1, speed: spec.sp, cool: 0 });
-  };
+    if (chance(.95 - .55 * t + DF.blanket)) place('blanket', bw);
+    if (chance(.55 - .45 * t + DF.blanket)) place('blanket', bw);
+    if (n <= 96 && chance(.22 + .25 * t)) place('block', 38);
 
-  if (n === TOP) place('blanket', 84 * K, null, W / 2);
-  const bw = Math.round((78 - 24 * t + DF.hole * .4) * K);
-  // 구멍 바로 옆 이불 (쉬운 난이도일수록 자주)
-  if (n !== TOP && chance(DF.near - .3 * t * (DF.near < .5 ? 1 : .5))) {
-    const left = hx > W - hx - hw ? true : hx + hw > W - 20 ? true : hx < 20 ? false : chance(.5);
-    place('blanket', bw, null, left ? hx - bw / 2 - 4 : hx + hw + bw / 2 + 4);
+    // 구역별 방해 요소
+    switch (zi) {
+      case 0:
+        if (n <= 94 && chance(.2)) place('tramp', 56 * K);
+        if (n <= 88 && chance(.25)) addMover('vac');
+        if (n <= 86 && chance(.12)) place('fan', 24, { dir: 0 });
+        if (n <= 90 && chance(.08)) place('gold', 60 * K);
+        break;
+      case 1:
+        if (chance(.45)) addMover('cat');
+        if (chance(.2)) addMover('vac');
+        if (chance(.22)) place('fan', 24, { dir: 0 });
+        if (chance(.2)) place('mblanket', 64 * K);
+        if (chance(.1)) place('tramp', 56 * K);
+        break;
+      case 2:
+        if (chance(.5)) place('block', 38);
+        if (chance(.35)) place('tramp', 56 * K);
+        if (chance(.38)) addMover('car');
+        if (chance(.3)) place('mblanket', 64 * K);
+        if (chance(.15)) place('gold', 60 * K);
+        break;
+      case 3:
+        if (chance(.7)) place('creak', rr(60, 96) * K);
+        if (chance(.5)) place('creak', rr(60, 96) * K);
+        if (chance(.45)) place('crumble', 72 * K, { state: 0, t: 0 });
+        if (chance(.22)) place('glass', 62 * K);
+        if (chance(.2)) place('washer', 36);
+        break;
+      case 4:
+        if (chance(.35)) place('glass', 62 * K);
+        if (chance(.35)) place('washer', 36);
+        if (chance(.4)) place('creak', rr(60, 96) * K);
+        if (chance(.25)) place('fan', 24, { dir: 0 });
+        if (chance(.2)) addMover('cat');
+        if (chance(.2)) addMover('vac');
+        break;
+      default:
+        if (chance(.3)) place('glass', 62 * K);
+        if (chance(.3)) place('crumble', 72 * K, { state: 0, t: 0 });
+        if (chance(.3)) place('creak', rr(60, 96) * K);
+        if (chance(.3)) addMover('car');
+        if (chance(.25)) addMover('cat');
+        if (chance(.2)) place('fan', 24, { dir: 0 });
+        if (chance(.2)) place('washer', 36);
+        if (chance(.2)) place('tramp', 56 * K);
+    }
+    for (const o of f.feats) {
+      if (o.type === 'fan' && !o.dir) o.dir = (o.x0 + o.x1) / 2 < ox + sw / 2 ? 1 : -1;
+      if (o.type === 'mblanket' && !o.speed) { o.min = o.seg[0]; o.max = o.seg[1]; o.dir = chance(.5) ? -1 : 1; o.speed = (40 + 30 * t) * K; }
+    }
+
   }
-  if (chance(.95 - .55 * t + DF.blanket)) place('blanket', bw);
-  if (chance(.55 - .45 * t + DF.blanket)) place('blanket', bw);
-  if (n <= 96 && chance(.22 + .25 * t)) place('block', 38);
-
-  // 구역별 방해 요소
+  f.hole = f.holes[0];
   const dogP = [n <= 92 ? .12 : 0, .45, .1, .1, .1, .2][zi];
-  switch (zi) {
-    case 0:
-      if (n <= 94 && chance(.2)) place('tramp', 56 * K);
-      if (n <= 88 && chance(.25)) addMover('vac');
-      if (n <= 86 && chance(.12)) place('fan', 24, { dir: 0 });
-      if (n <= 90 && chance(.08)) place('gold', 60 * K);
-      break;
-    case 1:
-      if (chance(.45)) addMover('cat');
-      if (chance(.2)) addMover('vac');
-      if (chance(.22)) place('fan', 24, { dir: 0 });
-      if (chance(.2)) place('mblanket', 64 * K);
-      if (chance(.1)) place('tramp', 56 * K);
-      break;
-    case 2:
-      if (chance(.5)) place('block', 38);
-      if (chance(.35)) place('tramp', 56 * K);
-      if (chance(.38)) addMover('car');
-      if (chance(.3)) place('mblanket', 64 * K);
-      if (chance(.15)) place('gold', 60 * K);
-      break;
-    case 3:
-      if (chance(.7)) place('creak', rr(60, 96) * K);
-      if (chance(.5)) place('creak', rr(60, 96) * K);
-      if (chance(.45)) place('crumble', 72 * K, { state: 0, t: 0 });
-      if (chance(.22)) place('glass', 62 * K);
-      if (chance(.2)) place('washer', 36);
-      break;
-    case 4:
-      if (chance(.35)) place('glass', 62 * K);
-      if (chance(.35)) place('washer', 36);
-      if (chance(.4)) place('creak', rr(60, 96) * K);
-      if (chance(.25)) place('fan', 24, { dir: 0 });
-      if (chance(.2)) addMover('cat');
-      if (chance(.2)) addMover('vac');
-      break;
-    default:
-      if (chance(.3)) place('glass', 62 * K);
-      if (chance(.3)) place('crumble', 72 * K, { state: 0, t: 0 });
-      if (chance(.3)) place('creak', rr(60, 96) * K);
-      if (chance(.3)) addMover('car');
-      if (chance(.25)) addMover('cat');
-      if (chance(.2)) place('fan', 24, { dir: 0 });
-      if (chance(.2)) place('washer', 36);
-      if (chance(.2)) place('tramp', 56 * K);
-  }
-  for (const o of f.feats) {
-    if (o.type === 'fan') o.dir = (o.x0 + o.x1) / 2 < W / 2 ? 1 : -1;
-    if (o.type === 'mblanket') { o.min = o.seg[0]; o.max = o.seg[1]; o.dir = chance(.5) ? -1 : 1; o.speed = (40 + 30 * t) * K; }
-  }
 
   // 아이템 (n층 방 안에 떠 있음)
-  if (n <= 97 && (mode.endless || n > 3) && chance(.2)) {
+  if (n <= 97 && (mode.endless || n > 3) && chance(1 - Math.pow(.8, Math.min(NSEC, 2)))) {
     const table = { mat: 3, feather: 2, ice: 2, spray: mode.chaos ? 0 : 2, ghost: 2, letter: mode.chaos ? 0 : 2,
       bomb: (mode.endless || n - 6 >= 2) ? 2 : 0 };
     f.item = { type: pickW(table), x: rr(30, W - 30), y: slabTop(n) - 72, taken: false };
@@ -502,9 +534,12 @@ function genFloor(n) {
   return f;
 }
 // 착지 지점 판정: null = 구멍
+const startX = () => (Math.floor(NSEC / 2) + .5) * (W / NSEC);
+// 공에서 가장 가까운 구멍
+function nearHole(f, x) { let b = null, bd = 1e9; for (const h of f.holes || []) { const d = Math.abs(h.x + h.w / 2 - x); if (d < bd) { bd = d; b = h; } } return b; }
 function surfaceAt(f, x) {
   if (f.ground) return { type: 'wood' };
-  if (x >= f.hole.x && x <= f.hole.x + f.hole.w) return null;
+  for (const h of f.holes) if (x >= h.x && x <= h.x + h.w) return null;
   let hit = null;
   for (const o of f.feats) {
     if (x < o.x0 || x > o.x1) continue;
@@ -546,7 +581,7 @@ function reset(keepSeed) {
   floorTimes = []; vsState = 0;
   floors = {}; genLow = TOP + 1;
   getF(mode.endless ? TOP - 30 : 1);
-  ball = { x: W / 2, y: slabTop(TOP) - R - 40, vx: 0, vy: 0, push: 0, sq: 0, stun: 0, ghost: 0, ghostCycle: 6 };
+  ball = { x: startX(), y: slabTop(TOP) - R - 40, vx: 0, vy: 0, push: 0, sq: 0, stun: 0, ghost: 0, ghostCycle: 6 };
   cam = ball.y - H * .42;
   ceilY = -70; ceilDelay = 1.5;
   noiseLv = 0; score = 0; woke = 0; lowestRoom = TOP; elapsed = 0; combo = 0; maxCombo = 0; complaints = 0; wokenList = [];
@@ -808,9 +843,10 @@ function passFloors(room) {
     if (quiet && !mode.chaos) { popup(ball.x < W / 2 ? ball.x + 50 : ball.x - 50, slabTop(n) + 4, `쉿! +${pts}`, '#8fe0a8', 24); SFX.shh(); }
     else popup(ball.x, slabTop(n) + 4, '+' + pts, '#dfe4f3', 18);
     // 아슬아슬
-    if (!bombing && f.hole && n === lowestRoom && room === n - 1 && ball.ghost <= 0) {
-      const e1 = Math.abs(ball.x - f.hole.x), e2 = Math.abs(ball.x - (f.hole.x + f.hole.w));
-      if (Math.min(e1, e2) < R + 2 && f.hole.w > R * 2 + 4) {
+    const nh = f.holes ? nearHole(f, ball.x) : null;
+    if (!bombing && nh && n === lowestRoom && room === n - 1 && ball.ghost <= 0) {
+      const e1 = Math.abs(ball.x - nh.x), e2 = Math.abs(ball.x - (nh.x + nh.w));
+      if (Math.min(e1, e2) < R + 2 && nh.w > R * 2 + 4) {
         const p = Math.round(15 * BD.scoreMul); score += p;
         popup(ball.x, slabTop(n) + 40, `아슬아슬! +${p}`, '#ffd166', 20);
         slowT = .45; SFX.whoosh();
@@ -1049,7 +1085,8 @@ function update(dt, realDt) {
       if (guard.followT > followDelay * (mode.chase && guard.room - gr > 4 ? .45 : 1)) {
         guard.followT = 0; guard.room--;
         const above = getF(guard.room + 1);
-        guard.x = above && above.hole ? above.hole.x + above.hole.w / 2 : guard.x;
+        const gh = above && above.holes ? nearHole(above, guard.x) : null;
+        guard.x = gh ? gh.x + gh.w / 2 : guard.x;
         guard.appear = .3;
       }
     } else if (guard.room === gr) {
@@ -1405,15 +1442,14 @@ function drawSlab(f, t) {
     ctx.fillText('놀이터', W / 2, y + 60);
     return;
   }
-  const h = f.hole;
-  // 유리·무너지는 바닥 아래는 나무를 그리지 않음
-  const cut = [[h.x, h.x + h.w]];
+  // 구멍·유리·무너지는 바닥 아래는 나무를 그리지 않음
+  const cut = f.holes.map(h => [h.x, h.x + h.w]);
   for (const o of f.feats) if (o.type === 'glass' || o.type === 'crumble') cut.push([o.x0, o.x1]);
   cut.sort((a, b) => a[0] - b[0]);
   let cx = 0;
   for (const [a, b] of cut) { drawWood(cx, a, y, z); cx = Math.max(cx, b); }
   drawWood(cx, W, y, z);
-  ctx.fillStyle = 'rgba(8,10,24,.55)'; ctx.fillRect(h.x, y, h.w, SLAB);
+  ctx.fillStyle = 'rgba(8,10,24,.55)'; for (const h of f.holes) ctx.fillRect(h.x, y, h.w, SLAB);
   for (const o of f.feats) {
     const w = o.x1 - o.x0, sq = o.squish || 0;
     switch (o.type) {
