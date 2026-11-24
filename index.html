@@ -178,7 +178,7 @@
 const H = 640;                   // 기준 화면 높이
 // 가로 폭은 화면 비율에 맞춰 360(세로 모바일)~720(가로 PC). K = 가로 배율 (구멍·이불·이동 속도에 곱함)
 let W = 360, K = 1, wideLocked = false, booted = false;
-const MAX_W = 720;
+const MAX_W = Math.round(H * 16 / 9);   // 1920×1080(16:9) 화면을 꽉 채우는 폭 = 1138
 const FH = 170;                  // 한 층 높이
 const SLAB = 16;                 // 바닥 두께
 const R = 13;                    // 공 반지름
