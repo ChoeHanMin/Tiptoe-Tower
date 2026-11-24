@@ -147,7 +147,7 @@
 5. 콤보 단계를 올리면 상대에게 소음 민원 +8% 공격
 6. 끝나면 순위표, **대기실로** 돌아가 다음 판
 
-서버는 Firebase Realtime Database를 씁니다. 설정 방법은 [FIREBASE.md](FIREBASE.md) 참고.
+서버는 Firebase Realtime Database를 씁니다. 설정 방법은 [FIREBASE.md](FIREBASE.md) 참고. (현재는 서버 주소가 비어 있어 시작 화면에서 실시간 대전 버튼이 숨겨져 있음)
 
 ## 처음 하는 사람을 위한 안내
 
@@ -177,6 +177,11 @@ TV가 있는 방은 주기적으로 TV 소리가 커집니다 (조용 → 화면
 - 도전장은 보낸 사람과 같은 규격으로 플레이 (넓은 맵 기록을 폰에서 열면 표준 맵으로 하고 안내 표시)
 
 그림 에셋 요청 가이드는 [ASSET_PROMPTS.md](ASSET_PROMPTS.md) 참고.
+
+## 그림
+
+주민 6종(4단계 표정), 강아지·경비원, 기본 공 표정, TV, 방 소품 6세트, 타이틀 일러스트는 `assets/`의 원본을 줄여서 `index.html` 맨 아래에 WebP로 넣었습니다 (약 0.7MB). 다시 만드는 방법은 [tools/README.md](tools/README.md).
+그림 데이터가 없으면 코드로 그린 그림으로 자동 대체됩니다.
 
 ## 캐릭터
 
