@@ -175,7 +175,10 @@
 // =====================================================================
 // 기본 설정
 // =====================================================================
-const W = 360, H = 640;          // 기준 화면
+const H = 640;                   // 기준 화면 높이
+// 가로 폭은 화면 비율에 맞춰 360(세로 모바일)~720(가로 PC). K = 가로 배율 (구멍·이불·이동 속도에 곱함)
+let W = 360, K = 1, wideLocked = false, booted = false;
+const MAX_W = 720;
 const FH = 170;                  // 한 층 높이
 const SLAB = 16;                 // 바닥 두께
 const R = 13;                    // 공 반지름
@@ -192,6 +195,14 @@ const $ = id => document.getElementById(id);
 
 let scale = 1, dpr = 1;
 function resize() {
+  if (!wideLocked) {
+    const nw = Math.round(Math.min(MAX_W, Math.max(360, H * innerWidth / Math.max(1, innerHeight))));
+    if (nw !== W) {
+      W = nw; K = W / 360;
+      wrap.style.width = W + 'px';
+      if (booted) { reset(); }
+    }
+  }
   scale = Math.min(innerWidth / W, innerHeight / H);
   dpr = Math.min(window.devicePixelRatio || 1, 3);
   wrap.style.transform = `translate(-50%,-50%) scale(${scale})`;
@@ -376,8 +387,8 @@ function genFloor(n) {
   const zi = zoneIdx(n), z = ZONES[zi];
   const f = { n, zi, thumped: false, feats: [], movers: [], item: null, neighbor: null, dog: null, washOff: rng() * 3, shakeT: 0 };
   if (!mode.endless && n === 1) { f.ground = true; return f; }
-  const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8) + DF.hole, 42, 150));
-  const hx = n === TOP ? (chance(.5) ? rr(10, 60) : rr(W - 60 - hw, W - 10 - hw)) : rr(8, W - 8 - hw);
+  const hw = Math.round(clamp(116 - 56 * t - 14 * (tx - t) + rr(-8, 8) + DF.hole, 42, 150) * K);
+  const hx = n === TOP ? (chance(.5) ? rr(10 * K, 60 * K) : rr(W - 60 * K - hw, W - 10 * K - hw)) : rr(8, W - 8 - hw);
   f.hole = { x: hx, w: hw };
   const segs = [[0, hx], [hx + hw, W]].filter(s => s[1] - s[0] > 10);
 
@@ -402,13 +413,13 @@ function genFloor(n) {
     const s = segs.filter(s => s[1] - s[0] > 100);
     if (!s.length) return;
     const sg = s[Math.floor(rng() * s.length)];
-    const spec = { vac: { w: 44, sp: 32 + 26 * t }, car: { w: 32, sp: 110 + 40 * t }, cat: { w: 30, sp: 28 } }[kind];
+    const spec = { vac: { w: 44, sp: (32 + 26 * t) * K }, car: { w: 32, sp: (110 + 40 * t) * K }, cat: { w: 30, sp: 28 * K } }[kind];
     f.movers.push({ kind, x: rr(sg[0] + 24, sg[1] - 24), w: spec.w, min: sg[0] + spec.w / 2, max: sg[1] - spec.w / 2,
       dir: chance(.5) ? -1 : 1, speed: spec.sp, cool: 0 });
   };
 
-  if (n === TOP) place('blanket', 84, null, W / 2);
-  const bw = Math.round(78 - 24 * t + DF.hole * .4);
+  if (n === TOP) place('blanket', 84 * K, null, W / 2);
+  const bw = Math.round((78 - 24 * t + DF.hole * .4) * K);
   // 구멍 바로 옆 이불 (쉬운 난이도일수록 자주)
   if (n !== TOP && chance(DF.near - .3 * t * (DF.near < .5 ? 1 : .5))) {
     const left = hx > W - hx - hw ? true : hx + hw > W - 20 ? true : hx < 20 ? false : chance(.5);
@@ -422,53 +433,53 @@ function genFloor(n) {
   const dogP = [n <= 92 ? .12 : 0, .45, .1, .1, .1, .2][zi];
   switch (zi) {
     case 0:
-      if (n <= 94 && chance(.2)) place('tramp', 56);
+      if (n <= 94 && chance(.2)) place('tramp', 56 * K);
       if (n <= 88 && chance(.25)) addMover('vac');
       if (n <= 86 && chance(.12)) place('fan', 24, { dir: 0 });
-      if (n <= 90 && chance(.08)) place('gold', 60);
+      if (n <= 90 && chance(.08)) place('gold', 60 * K);
       break;
     case 1:
       if (chance(.45)) addMover('cat');
       if (chance(.2)) addMover('vac');
       if (chance(.22)) place('fan', 24, { dir: 0 });
-      if (chance(.2)) place('mblanket', 64);
-      if (chance(.1)) place('tramp', 56);
+      if (chance(.2)) place('mblanket', 64 * K);
+      if (chance(.1)) place('tramp', 56 * K);
       break;
     case 2:
       if (chance(.5)) place('block', 38);
-      if (chance(.35)) place('tramp', 56);
+      if (chance(.35)) place('tramp', 56 * K);
       if (chance(.38)) addMover('car');
-      if (chance(.3)) place('mblanket', 64);
-      if (chance(.15)) place('gold', 60);
+      if (chance(.3)) place('mblanket', 64 * K);
+      if (chance(.15)) place('gold', 60 * K);
       break;
     case 3:
-      if (chance(.7)) place('creak', rr(60, 96));
-      if (chance(.5)) place('creak', rr(60, 96));
-      if (chance(.45)) place('crumble', 72, { state: 0, t: 0 });
-      if (chance(.22)) place('glass', 62);
+      if (chance(.7)) place('creak', rr(60, 96) * K);
+      if (chance(.5)) place('creak', rr(60, 96) * K);
+      if (chance(.45)) place('crumble', 72 * K, { state: 0, t: 0 });
+      if (chance(.22)) place('glass', 62 * K);
       if (chance(.2)) place('washer', 36);
       break;
     case 4:
-      if (chance(.35)) place('glass', 62);
+      if (chance(.35)) place('glass', 62 * K);
       if (chance(.35)) place('washer', 36);
-      if (chance(.4)) place('creak', rr(60, 96));
+      if (chance(.4)) place('creak', rr(60, 96) * K);
       if (chance(.25)) place('fan', 24, { dir: 0 });
       if (chance(.2)) addMover('cat');
       if (chance(.2)) addMover('vac');
       break;
     default:
-      if (chance(.3)) place('glass', 62);
-      if (chance(.3)) place('crumble', 72, { state: 0, t: 0 });
-      if (chance(.3)) place('creak', rr(60, 96));
+      if (chance(.3)) place('glass', 62 * K);
+      if (chance(.3)) place('crumble', 72 * K, { state: 0, t: 0 });
+      if (chance(.3)) place('creak', rr(60, 96) * K);
       if (chance(.3)) addMover('car');
       if (chance(.25)) addMover('cat');
       if (chance(.2)) place('fan', 24, { dir: 0 });
       if (chance(.2)) place('washer', 36);
-      if (chance(.2)) place('tramp', 56);
+      if (chance(.2)) place('tramp', 56 * K);
   }
   for (const o of f.feats) {
     if (o.type === 'fan') o.dir = (o.x0 + o.x1) / 2 < W / 2 ? 1 : -1;
-    if (o.type === 'mblanket') { o.min = o.seg[0]; o.max = o.seg[1]; o.dir = chance(.5) ? -1 : 1; o.speed = 40 + 30 * t; }
+    if (o.type === 'mblanket') { o.min = o.seg[0]; o.max = o.seg[1]; o.dir = chance(.5) ? -1 : 1; o.speed = (40 + 30 * t) * K; }
   }
 
   // 아이템 (n층 방 안에 떠 있음)
@@ -482,7 +493,7 @@ function genFloor(n) {
   const type = n - 1 === 99 ? 'normal' : pickW(rz.res);
   const x = rr(36, W - 36);
   f.neighbor = { x, type, awake: type === 'gamer', hits: 0, bubble: 0, bubbleText: '', wakeT: 1, knock: 0, knockT: 0, cry: 0,
-    unit: 1 + Math.floor(x / 90) };
+    unit: 1 + Math.min(3, Math.floor(x / (W / 4))) };
   if (chance(dogP)) {
     let dx = rr(36, W - 36);
     if (Math.abs(dx - x) < 60) dx = x < W / 2 ? x + rr(70, 140) : x - rr(70, 140);
@@ -696,7 +707,7 @@ function land(f) {
   for (const m of f.movers) {
     if (Math.abs(x - m.x) < m.w / 2 + 6) {
       ball.vy = -bv;
-      ball.push = (Math.sign(x - m.x) || m.dir) * 300;
+      ball.push = (Math.sign(x - m.x) || m.dir) * 300 * K;
       if (m.kind === 'cat') { thump(f, x, 12, '냐아앙!', '#ffb36b'); SFX.meow(); }
       else thump(f, x, 12, m.kind === 'car' ? '부릉!' : '위이잉~', '#9fe3c0');
       return;
@@ -732,7 +743,7 @@ function land(f) {
     case 'block': {
       ball.vy = -bv * .8;
       ball.stun = .5;
-      ball.push = (x < (o.x0 + o.x1) / 2 ? -1 : 1) * 170;   // 블록에 갇히지 않게
+      ball.push = (x < (o.x0 + o.x1) / 2 ? -1 : 1) * 170 * K;   // 블록에 갇히지 않게
       SFX.ouch();
       popup(x, top - 40, '아야!', '#ff8a8a', 22);
       dust(x, top, 5, '255,220,120');
@@ -758,7 +769,7 @@ function land(f) {
     case 'washer': {
       const vib = ((elapsed + f.washOff) % 3.2) < 1.1;
       if (vib) {
-        ball.vy = -bv * 1.5; ball.push = (Math.random() < .5 ? -1 : 1) * 240;
+        ball.vy = -bv * 1.5; ball.push = (Math.random() < .5 ? -1 : 1) * 240 * K;
         thump(f, x, 15, '덜덜덜!', '#9fd8ff'); SFX.wash();
       } else { ball.vy = -bv; thump(f, x, 12); }
       break;
@@ -901,7 +912,7 @@ function update(dt, realDt) {
         if (nb.knockT <= 0) {
           nb.knockT = .75; f.shakeT = .2; SFX.knock();
           if (br === f.n && ball.y + R > slabTop(f.n) - 34 && ball.ghost <= 0) {
-            ball.vy = -bounceV() * 1.15; ball.push += rand(-120, 120);
+            ball.vy = -bounceV() * 1.15; ball.push += rand(-120, 120) * K;
             popup(ball.x, ball.y - 30, '쾅쾅!', '#ffb36b', 20);
           }
         }
@@ -923,7 +934,7 @@ function update(dt, realDt) {
     for (const m of f.movers) {
       m.cool = Math.max(0, m.cool - dt);
       let sp = m.speed, dir = m.dir;
-      if (m.kind === 'cat' && br === n && state === 'play') { dir = Math.sign(ball.x - m.x) || 1; sp = 85; m.dir = dir; }
+      if (m.kind === 'cat' && br === n && state === 'play') { dir = Math.sign(ball.x - m.x) || 1; sp = 85 * K; m.dir = dir; }
       m.x += dir * sp * dt;
       if (m.x < m.min) { m.x = m.min; m.dir = 1; } if (m.x > m.max) { m.x = m.max; m.dir = -1; }
     }
@@ -952,7 +963,7 @@ function update(dt, realDt) {
   for (const v of input.ptr.values()) dir += v;
   dir = clamp(dir, -1, 1);
   ball.stun = Math.max(0, ball.stun - dt);
-  const target = ball.stun > 0 ? 0 : dir * MOVE * BD.move;
+  const target = ball.stun > 0 ? 0 : dir * MOVE * BD.move * K;
   ball.vx += (target - ball.vx) * Math.min(1, dt * BD.accel);
   ball.push *= Math.pow(.04, dt);
   ball.sq = Math.max(0, ball.sq - dt * 5);
@@ -993,7 +1004,7 @@ function update(dt, realDt) {
     const cf = getF(roomOf(ball.y));
     if (cf && !cf.ground) for (const m of cf.movers) {
       if (m.cool <= 0 && ball.y + R > slabTop(cf.n) - 22 && Math.abs(ball.x - m.x) < m.w / 2 + R * .6) {
-        ball.push = (Math.sign(ball.x - m.x) || m.dir) * 280; m.cool = .6;
+        ball.push = (Math.sign(ball.x - m.x) || m.dir) * 280 * K; m.cool = .6;
         if (m.kind === 'cat') { popup(m.x, slabTop(cf.n) - 40, '냥!', '#ffb36b', 18); SFX.meow(); }
       }
     }
@@ -1002,7 +1013,7 @@ function update(dt, realDt) {
   const ff = getF(roomOf(ball.y));
   if (ff && !ff.ground) for (const o of ff.feats) if (o.type === 'fan') {
     const fxp = (o.x0 + o.x1) / 2, d = (ball.x - fxp) * o.dir;
-    if (d > 0) ball.push += o.dir * 520 * dt * Math.max(0, 1 - d / 330);
+    if (d > 0) ball.push += o.dir * 520 * K * dt * Math.max(0, 1 - d / (330 * K));
   }
   ball.x += (ball.vx + ball.push) * dt;
   if (ball.x < R) { ball.x = R; ball.push = Math.abs(ball.push) * .5; if (BD.id === 'ice') ball.vx = Math.abs(ball.vx) * .5; }
@@ -1043,7 +1054,7 @@ function update(dt, realDt) {
       }
     } else if (guard.room === gr) {
       guard.followT = 0;
-      const sp = (mode.chase ? Math.min(140, 78 + depthG * .6) : Math.min(120, 62 + depthG * .5)) * DF.guard;
+      const sp = (mode.chase ? Math.min(140, 78 + depthG * .6) : Math.min(120, 62 + depthG * .5)) * DF.guard * K;
       const d = ball.x - guard.x;
       guard.x += Math.sign(d) * Math.min(Math.abs(d), sp * dt);
       guard.step += dt;
@@ -1162,6 +1173,7 @@ function showResult() {
 }
 function start() {
   audio();
+  wideLocked = true;
   reset();
   state = 'play';
   for (const id of ['startScreen', 'resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
@@ -1169,7 +1181,7 @@ function start() {
     : { title: `${floorName(TOP)} · ${ZONES[0].name}`, sub: (mode.chaos ? '최대한 많이 깨워라!' : mode.name + ' 모드') + ` · 난이도 ${DF.name}`, t: 0, color: '#ffd166', dur: 1.8 };
 }
 function goHome() {
-  state = 'title'; reset();
+  state = 'title'; wideLocked = false; resize(); reset();
   for (const id of ['resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
   $('startScreen').classList.remove('hidden');
   buildMenu();
@@ -1310,7 +1322,8 @@ function drawDog(x, y, d, t) {
   else { ctx.fillStyle = 'rgba(200,210,240,.5)'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('zz', x + 14, y - 14 + Math.sin(t * 2) * 2); }
 }
 function drawDeco(z, A, t, lit) {
-  const x = 180, y = A + SLAB + 50;
+  const nWin = Math.max(2, Math.round(W / 180));
+  const x = nWin % 2 === 0 ? W / 2 : W / nWin, y = A + SLAB + 50;
   ctx.save(); ctx.globalAlpha = .55 + .3 * lit;
   switch (z.deco) {
     case 'clock':
@@ -1356,7 +1369,9 @@ function drawRoom(k, t) {
     ctx.fillStyle = g; ctx.fillRect(0, A, W, FH);
   }
   if (nb && nb.cry > 0) { ctx.fillStyle = `rgba(255,120,160,${.08 + .06 * Math.sin(t * 20)})`; ctx.fillRect(0, A, W, FH); }
-  for (const wx of [68, 218]) {
+  const nWin = Math.max(2, Math.round(W / 180)), slotW = W / nWin;
+  const winXs = nWin === 2 && W === 360 ? [68, 218] : Array.from({ length: nWin }, (_, i) => slotW * i + slotW / 2 - 36);
+  for (const wx of winXs) {
     const wy = A + SLAB + 24, ww = 72, wh = 72;
     ctx.fillStyle = awake ? `rgba(255,214,120,${.25 + .75 * lit})` : gamer ? 'rgba(120,170,255,.55)' : '#141a33';
     rrect(wx, wy, ww, wh, 6); ctx.fill();
@@ -1639,7 +1654,7 @@ function drawHUD(t) {
   const fl = Math.min(roomOf(ball.y), TOP);
   ctx.fillStyle = '#fff'; ctx.font = '900 24px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText(floorName(fl), 12, HUD_H / 2 + 1);
-  const gx = 88, gw = 160, gy = 17, gh = 18;
+  const gw = W > 360 ? 220 : 160, gx = W > 360 ? W / 2 - gw / 2 : 88, gy = 17, gh = 18;
   ctx.fillStyle = '#2a3560'; rrect(gx, gy, gw, gh, 9); ctx.fill();
   const v = noiseLv;
   if (v > 0) {
@@ -1725,7 +1740,7 @@ function drawBottom(t) {
 function drawOpp(t) {
   if (mp.playing) { drawMpOpp(t); return; }
   if (!challenge) return;
-  const x = 266, y = HUD_H + 6, w = 86, h = 46;
+  const x = W - 94, y = HUD_H + 6, w = 86, h = 46;
   const of = oppFloor(), done = oppDone();
   const ahead = of < lowestRoom;
   ctx.fillStyle = ahead ? 'rgba(90,30,40,.85)' : 'rgba(25,60,45,.85)'; rrect(x, y, w, h, 10); ctx.fill();
@@ -1754,7 +1769,7 @@ function drawClearOverview() {
   ctx.fillStyle = `rgba(10,14,32,${Math.min(.92, overT * 1.5)})`; ctx.fillRect(0, 0, W, H);
   if (overT < .3) return;
   const rows = lastResult ? lastResult.lit : [];
-  const bx = 110, by = 120, bw = 140, bh = 420, rh = bh / Math.max(1, rows.length);
+  const bx = W / 2 - 70, by = 120, bw = 140, bh = 420, rh = bh / Math.max(1, rows.length);
   ctx.fillStyle = '#1b2244'; ctx.fillRect(bx, by, bw, bh);
   ctx.fillStyle = '#3a4466'; ctx.fillRect(bx - 8, by - 10, bw + 16, 10);
   const shown = Math.floor(rows.length * k);
@@ -1783,8 +1798,8 @@ function render(t) {
   ctx.translate(sx, -cam + sy);
   if (cam < 0) {
     ctx.fillStyle = '#0a0f26'; ctx.fillRect(0, cam - 20, W, -cam + 20);
-    ctx.fillStyle = '#e8ecf8'; ctx.beginPath(); ctx.arc(300, -150, 16, 0, 7); ctx.fill();
-    ctx.fillStyle = '#0a0f26'; ctx.beginPath(); ctx.arc(306, -155, 14, 0, 7); ctx.fill();
+    ctx.fillStyle = '#e8ecf8'; ctx.beginPath(); ctx.arc(W - 60, -150, 16, 0, 7); ctx.fill();
+    ctx.fillStyle = '#0a0f26'; ctx.beginPath(); ctx.arc(W - 54, -155, 14, 0, 7); ctx.fill();
   }
   const rTop = Math.min(TOP, roomOf(cam) + 1), rBot = roomOf(cam + H) - 1;
   for (let k = rTop; k >= rBot; k--) { if (!mode.endless && k < 1) break; drawRoom(k, t); }
@@ -2157,7 +2172,7 @@ function mpLeave() {
 }
 function openLobby() {
   for (const id of ['startScreen', 'resultScreen', 'cardScreen', 'shareScreen']) $(id).classList.add('hidden');
-  if (state !== 'title') { state = 'title'; reset(); }
+  if (state !== 'title') { state = 'title'; wideLocked = false; resize(); reset(); }
   mp.playing = false;
   $('mpName').value = $('mpName').value || store.get('tiptoe.name', '');
   $('mpScreen').classList.remove('hidden');
@@ -2237,7 +2252,7 @@ function renderMpResult() {
 function drawMpOpp(t) {
   const others = mpPlayers().filter(p => p.id !== mp.id && mpInRound(p));
   const ahead = others.filter(p => !p.done ? (p.f || TOP) < lowestRoom : p.r === 'clear').length;
-  const x = 266, w = 86;
+  const x = W - 94, w = 86;
   let y = HUD_H + 6;
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(12,16,34,.8)'; rrect(x, y, w, 22, 8); ctx.fill();
@@ -2288,6 +2303,7 @@ const roomHash = location.hash.match(/^#r=([A-Za-z0-9]{4})$/);
 if (challenge) { modeId = challenge.m; diffId = challenge.d; }
 addEventListener('hashchange', () => { if (state === 'title') { const c = readChallenge(); if (c) { challenge = c; modeId = c.m; diffId = c.d; buildMenu(); } } });
 reset();
+booted = true;
 buildMenu();
 if (roomHash) { openLobby(); $('mpCode').value = roomHash[1].toUpperCase(); mpMsg('이름을 입력하고 참가를 눌러 주세요'); }
 requestAnimationFrame(frame);
