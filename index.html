@@ -1302,7 +1302,10 @@ function storyLines(r) {
     .map(k => `${WHO[k][0]} ${r.story.woke[k]}${WHO[k][1]}`);
   if (r.story.dog) parts.push(`강아지 ${r.story.dog}마리`);
   if (r.woke === 0 && !r.story.dog) L.push('아무도 깨우지 않았어요. 완벽한 까치발!');
-  else if (parts.length) L.push((parts.length > 1 ? parts[0] + josaWa(parts[0]) + ' ' + parts[1] : parts[0]) + (parts.length > 2 ? ' 등' : '') + '을 깨웠어요.');
+  else if (parts.length) {
+    const obj = (parts.length > 1 ? parts[0] + josaWa(parts[0]) + ' ' + parts[1] : parts[0]) + (parts.length > 2 ? ' 등' : '');
+    L.push(obj + (josaWa(obj) === '과' ? '을' : '를') + ' 깨웠어요.');
+  }
   if (r.story.gamers.length) L.push(`${floorName(r.story.gamers[0])} 게이머는 당신을 응원했어요.`);
   else if (r.story.tv) L.push(`TV 소리에 ${r.story.tv}번 숨었어요.`);
   else if (r.story.knock) L.push(`할아버지가 빗자루로 천장을 ${r.story.knock}번 쳤어요.`);
